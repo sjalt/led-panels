@@ -193,8 +193,6 @@ static const uint16_t spaceneedle_fire3[48] PROGMEM={ // 6x8
     0xFE20, 0xC618, 0x0000, 0x4208, 0xC618, 0xF800, 0x4208, 0xFE20, 0x0000, 0x0000, 0xF800, 0xF800, 0x0000, 0x0000, 0xF800, 0xFBA9,   // 0x0020 (32) pixels
     0xF800, 0xF800, 0xFB27, 0xFB27, 0x4208, 0xFBA9, 0xFE20, 0xF800, 0xFE20, 0xF800, 0xF800, 0xF800, 0xFE20, 0xFE20, 0xFE20, 0xF800,   // 0x0030 (48) pixels
 };
-
-
 static const uint16_t godzilla_med[320] PROGMEM={
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0020, 0x02E0, 0x03E0, 0x03A0,   // 0x0010 (16) pixels
     0x0240, 0x0040, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x10A2, 0x0020,   // 0x0020 (32) pixels
@@ -217,6 +215,14 @@ static const uint16_t godzilla_med[320] PROGMEM={
     0x02A4, 0x03C0, 0x03E0, 0x0360, 0x0200, 0x1242, 0x21A4, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0300, 0x00E1, 0x00C1, 0x00C1,   // 0x0130 (304) pixels
     0x00C1, 0x0040, 0x0020, 0x0040, 0x0340, 0x03E0, 0x03E0, 0x03E0, 0x0200, 0x02E0, 0x21A4, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,   // 0x0140 (320) pixels
 };
+static const uint8_t godzilla_med_mask[40] PROGMEM={
+    0x00, 0x00, 0x00, 0x80, 0x80, 0xc0, 0xe0, 0xf0, 
+    0xf8, 0xfe, 0xfe, 0xfe, 0xff, 0xff, 0xff, 0xff, 
+    0x3f, 0x3f, 0x3f, 0x3e, 0xf8, 0xfc, 0xfe, 0xff, 
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+    0xff, 0xef, 0xc7, 0x23, 0x00, 0x00, 0x00, 0x00
+};
+
 static const uint16_t sneedle_med[256] PROGMEM={ //16x16
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x4228, 0x5AEB, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,   // 0x0010 (16) pixels
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x4208, 0xCE59, 0xE71C, 0x5ACB, 0x0841, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,   // 0x0020 (32) pixels
@@ -293,7 +299,7 @@ static const uint16_t sneedle_med_fl3[256] PROGMEM={ //16x16
 
 
 
-
+int modeState = 0;
 
 
 // array of bitmaps with their dimensions:
@@ -315,13 +321,16 @@ int pass = 0;
 String txtMsg = "Go Timbers!"; 
 int txtMsgLngth = txtMsg.length() * 1;
 
-void setup() {
-  matrix.begin();
-  matrix.setTextWrap(false);
-  matrix.setBrightness(40);
-  matrix.setTextColor(colors[0]);
-}
-
+void changeMode() {
+    modeState++;
+    matrix.clear();
+    matrix.setCursor(0, 0);
+    matrix.setTextColor(0x03E0);
+    matrix.print((modeState));
+    if (modeState > 3) {
+        modeState = 0;
+    }
+}  
 
 // function for vertical scrolling a bitmap using the bitmaps array
 void scroll_bitmap(int bitmap_index) {
@@ -334,9 +343,9 @@ void scroll_bitmap(int bitmap_index) {
   }
   matrix.clear();
 }
-
 // godzilla move to space Needle
 void burninate() {
+  
     matrix.clear();
     // matrix.drawRGBBitmap(0, 0, godzilla_small, 7, 8);
     // matrix.drawRGBBitmap(-10, 0, godzilla_med, 20, 16);
@@ -431,7 +440,7 @@ void burninate() {
         }
         matrix.drawRGBBitmap(-4, matrix.height()-i, godzilla_med, 20, 16);
         matrix.show();
-        // delay(50);
+        delay(50);
     }
 
     // display godzilla_small bitmap and then cycle through the fire bitmaps 4 Timbers
@@ -521,19 +530,41 @@ void burninate() {
 
 
 }
-
-void loop() {
-    burninate(); // Godzilla move to space Needle
-//   matrix.fillScreen(0);
-//   matrix.setCursor(0, 0);
-
-
+// just display godzilla looking at burning space needle
+void bonfire() {
+    
+    matrix.clear();
+    // matrix.drawRGBBitmap(16, 0, godzilla_small, 7, 8);
+    // matrix.drawRGBBitmap(24, 0, spaceneedle_fire1, 6, 8);
+    matrix.drawRGBBitmap(16, 0, sneedle_med_fl1, 16, 16);
+    matrix.drawRGBBitmap(-4, 0, godzilla_med, 20, 16);
+    matrix.show();
+    delay(100);
+    matrix.clear();
+    // matrix.drawRGBBitmap(16, 0, godzilla_small, 7, 8);
+    // matrix.drawRGBBitmap(24, 0, spaceneedle_fire2, 6, 8);
+    matrix.drawRGBBitmap(16, 0, sneedle_med_fl2, 16, 16);
+    matrix.drawRGBBitmap(-4, 0, godzilla_med, 20, 16);
+    matrix.show();
+    delay(100);
+    matrix.clear();
+    // matrix.drawRGBBitmap(16, 0, godzilla_small, 7, 8);
+    // matrix.drawRGBBitmap(24, 0, spaceneedle_fire3, 6, 8);
+    matrix.drawRGBBitmap(16, 0, sneedle_med_fl3, 16, 16);
+    matrix.drawRGBBitmap(-4, 0, godzilla_med, 20, 16);
+    matrix.show();
+    delay(100);
+}
+void goTimbers() {
+   
     x    = matrix.width();
     matrix.clear();
     scroll_bitmap(0); // Portland Timbers logo
     txtMsg = "Go Timbers!"; 
     txtMsgLngth = txtMsg.length() * 1;
     while (x > -txtMsgLngth*12) {
+        if (digitalRead(8) == LOW)  // Time to stop?
+           return;
         matrix.clear();
         matrix.fillScreen(0);
         matrix.setCursor(x, 0);
@@ -549,4 +580,53 @@ void loop() {
         
         delay(50);
     }
+}
+
+
+void setup() {
+    pinMode(8, INPUT_PULLUP);
+    // interrupt to detect pin 8 going low
+
+    matrix.begin();
+    matrix.setTextWrap(false);
+    matrix.setBrightness(40);
+    matrix.setTextColor(colors[0]);
+}
+void loop() {
+
+    // variable to hold the state of the button
+    int buttonState = digitalRead(8);
+
+    // if the button is pressed, cycle through the the modes
+    if (buttonState == LOW) {
+        modeState++;
+        if (modeState > 3) {
+            modeState = 0;
+        }
+    }
+
+    // switch statement to determine which mode to display
+    switch (modeState) {
+        case 0:
+            matrix.clear();
+            // matrix.drawRGBBitmap(0, 0, godzilla_med, godzilla_med_mask, 20, 16);
+            matrix.show();
+            // scroll_bitmap(0); // Portland Timbers logo
+            break;
+        case 1:
+            matrix.clear();
+            bonfire();
+            break;
+        case 2:
+            matrix.clear();
+            burninate(); // Godzilla
+            break;
+        case 3:
+            matrix.clear();
+            goTimbers(); // Space Needle
+            break;
+    }
+
+
+    
 }
