@@ -5,6 +5,8 @@ substitutions:
   panel_data_pin: GPIO2
   matrix_width: "32"
   matrix_height: "32"
+  # Use a path inside /config so ESPHome can access files during compile.
+  logo_base_path: /config/esphome/logos
   # Attribute containing the current game's team logo URL.
   team_logo_attribute: team_logo
   timbers_tracker_entity: sensor.mls_portland_timbers
@@ -40,13 +42,7 @@ wifi:
   on_connect:
     - script.execute: select_team_logo
 
-http_request:
-
 globals:
-  - id: selected_team_logo_url
-    type: std::string
-    restore_value: no
-    initial_value: '""'
   - id: last_team_logo_url
     type: std::string
     restore_value: no
@@ -62,23 +58,23 @@ globals:
   - id: timbers_logo_downloaded
     type: bool
     restore_value: no
-    initial_value: "false"
+    initial_value: "true"
   - id: hurricanes_logo_downloaded
     type: bool
     restore_value: no
-    initial_value: "false"
+    initial_value: "true"
   - id: rangers_logo_downloaded
     type: bool
     restore_value: no
-    initial_value: "false"
+    initial_value: "true"
   - id: avalanche_logo_downloaded
     type: bool
     restore_value: no
-    initial_value: "false"
+    initial_value: "true"
   - id: canadiens_logo_downloaded
     type: bool
     restore_value: no
-    initial_value: "false"
+    initial_value: "true"
 
 select:
   - platform: template
@@ -104,107 +100,82 @@ script:
     mode: restart
     then:
       - lambda: |-
-          std::string selected_url;
           std::string selected_team;
 
           if (id(selected_logo_source) == "Off") {
-            id(selected_team_logo_url).clear();
             id(requested_logo_source) = "";
+            id(last_team_logo_url).clear();
+            id(selected_logo_source) = "Off";
             return;
           }
 
-          auto select_if_present = [&](const std::string &name, const std::string &url) {
-            if (selected_url.empty() && !url.empty()) {
-              selected_url = url;
+          auto select_if_present = [&](const std::string &name, bool downloaded_ok) {
+            if (selected_team.empty() && downloaded_ok) {
               selected_team = name;
             }
           };
 
           if (id(selected_logo_source) == "Portland Timbers") {
-            select_if_present("timbers", id(timbers_logo).state);
+            select_if_present("timbers", id(timbers_logo_downloaded));
           } else if (id(selected_logo_source) == "Carolina Hurricanes") {
-            select_if_present("hurricanes", id(hurricanes_logo).state);
+            select_if_present("hurricanes", id(hurricanes_logo_downloaded));
           } else if (id(selected_logo_source) == "New York Rangers") {
-            select_if_present("rangers", id(rangers_logo).state);
+            select_if_present("rangers", id(rangers_logo_downloaded));
           } else if (id(selected_logo_source) == "Colorado Avalanche") {
-            select_if_present("avalanche", id(avalanche_logo).state);
+            select_if_present("avalanche", id(avalanche_logo_downloaded));
           } else if (id(selected_logo_source) == "Montreal Canadiens") {
-            select_if_present("canadiens", id(canadiens_logo).state);
+            select_if_present("canadiens", id(canadiens_logo_downloaded));
           }
 
           auto is_active_game = [](const std::string &state) {
             return !state.empty() && state != "PRE" && state != "POST" && state != "FINAL";
           };
 
-          auto try_active = [&](const std::string &state, const std::string &url, const std::string &team) {
-            if (selected_url.empty() && is_active_game(state) && !url.empty()) {
-              selected_url = url;
+          auto try_active = [&](const std::string &state, bool downloaded_ok, const std::string &team) {
+            if (selected_team.empty() && is_active_game(state) && downloaded_ok) {
               selected_team = team;
             }
           };
 
-          auto try_postseason_pre = [&](const std::string &state, const std::string &season, const std::string &url, const std::string &team) {
-            if (selected_url.empty() && state == "PRE" && season == "post-season" && !url.empty()) {
-              selected_url = url;
+          auto try_postseason_pre = [&](const std::string &state, const std::string &season, bool downloaded_ok, const std::string &team) {
+            if (selected_team.empty() && state == "PRE" && season == "post-season" && downloaded_ok) {
               selected_team = team;
             }
           };
 
-          auto try_pre = [&](const std::string &state, const std::string &url, const std::string &team) {
-            if (selected_url.empty() && state == "PRE" && !url.empty()) {
-              selected_url = url;
+          auto try_pre = [&](const std::string &state, bool downloaded_ok, const std::string &team) {
+            if (selected_team.empty() && state == "PRE" && downloaded_ok) {
               selected_team = team;
             }
           };
 
           if (id(selected_logo_source) == "Auto") {
-            try_active(id(timbers_state).state, id(timbers_logo).state, "timbers");
-            try_active(id(hurricanes_state).state, id(hurricanes_logo).state, "hurricanes");
-            try_active(id(rangers_state).state, id(rangers_logo).state, "rangers");
-            try_active(id(avalanche_state).state, id(avalanche_logo).state, "avalanche");
-            try_active(id(canadiens_state).state, id(canadiens_logo).state, "canadiens");
+            try_active(id(timbers_state).state, id(timbers_logo_downloaded), "timbers");
+            try_active(id(hurricanes_state).state, id(hurricanes_logo_downloaded), "hurricanes");
+            try_active(id(rangers_state).state, id(rangers_logo_downloaded), "rangers");
+            try_active(id(avalanche_state).state, id(avalanche_logo_downloaded), "avalanche");
+            try_active(id(canadiens_state).state, id(canadiens_logo_downloaded), "canadiens");
 
-            if (selected_url.empty()) {
-              try_postseason_pre(id(timbers_state).state, id(timbers_season).state, id(timbers_logo).state, "timbers");
-              try_postseason_pre(id(hurricanes_state).state, id(hurricanes_season).state, id(hurricanes_logo).state, "hurricanes");
-              try_postseason_pre(id(rangers_state).state, id(rangers_season).state, id(rangers_logo).state, "rangers");
-              try_postseason_pre(id(avalanche_state).state, id(avalanche_season).state, id(avalanche_logo).state, "avalanche");
-              try_postseason_pre(id(canadiens_state).state, id(canadiens_season).state, id(canadiens_logo).state, "canadiens");
+            if (selected_team.empty()) {
+              try_postseason_pre(id(timbers_state).state, id(timbers_season).state, id(timbers_logo_downloaded), "timbers");
+              try_postseason_pre(id(hurricanes_state).state, id(hurricanes_season).state, id(hurricanes_logo_downloaded), "hurricanes");
+              try_postseason_pre(id(rangers_state).state, id(rangers_season).state, id(rangers_logo_downloaded), "rangers");
+              try_postseason_pre(id(avalanche_state).state, id(avalanche_season).state, id(avalanche_logo_downloaded), "avalanche");
+              try_postseason_pre(id(canadiens_state).state, id(canadiens_season).state, id(canadiens_logo_downloaded), "canadiens");
             }
 
-            if (selected_url.empty()) {
-              try_pre(id(timbers_state).state, id(timbers_logo).state, "timbers");
-              try_pre(id(hurricanes_state).state, id(hurricanes_logo).state, "hurricanes");
-              try_pre(id(rangers_state).state, id(rangers_logo).state, "rangers");
-              try_pre(id(avalanche_state).state, id(avalanche_logo).state, "avalanche");
-              try_pre(id(canadiens_state).state, id(canadiens_logo).state, "canadiens");
+            if (selected_team.empty()) {
+              try_pre(id(timbers_state).state, id(timbers_logo_downloaded), "timbers");
+              try_pre(id(hurricanes_state).state, id(hurricanes_logo_downloaded), "hurricanes");
+              try_pre(id(rangers_state).state, id(rangers_logo_downloaded), "rangers");
+              try_pre(id(avalanche_state).state, id(avalanche_logo_downloaded), "avalanche");
+              try_pre(id(canadiens_state).state, id(canadiens_logo_downloaded), "canadiens");
             }
           }
 
-          id(selected_team_logo_url) = selected_url;
           id(requested_logo_source) = selected_team;
 
-      - if:
-          condition:
-            lambda: |-
-              return !id(selected_team_logo_url).empty() &&
-                     (id(selected_team_logo_url).rfind("http://", 0) == 0 ||
-                      id(selected_team_logo_url).rfind("https://", 0) == 0) &&
-                     id(selected_team_logo_url) != id(last_team_logo_url);
-          then:
-            - lambda: |-
-                id(last_team_logo_url) = id(selected_team_logo_url);
-            - online_image.set_url:
-                id: team_logo
-                url: !lambda |-
-                  return id(selected_team_logo_url);
-                update: true
-      - if:
-          condition:
-            lambda: |-
-              return id(selected_team_logo_url).empty();
-          then:
-            - component.update: led_matrix_display
+      - component.update: led_matrix_display
 
 text_sensor:
   - platform: homeassistant
@@ -313,41 +284,43 @@ text_sensor:
         - script.execute: select_team_logo
 
   - platform: template
-    id: downloaded_logos
-    name: Downloaded Logos
+    id: available_logos
+    name: Available Logos
     update_interval: never
     lambda: |-
       std::string value = "";
-      if (id(timbers_logo_downloaded)) value += "Portland Timbers, ";
-      if (id(hurricanes_logo_downloaded)) value += "Carolina Hurricanes, ";
-      if (id(rangers_logo_downloaded)) value += "New York Rangers, ";
-      if (id(avalanche_logo_downloaded)) value += "Colorado Avalanche, ";
-      if (id(canadiens_logo_downloaded)) value += "Montreal Canadiens, ";
-      if (value.empty()) return std::string("none");
-      value.resize(value.size() - 2);
+      value += "Portland Timbers, ";
+      value += "Carolina Hurricanes, ";
+      value += "New York Rangers, ";
+      value += "Colorado Avalanche, ";
+      value += "Montreal Canadiens";
       return value;
 
-online_image:
-  - url: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/64px-No_image_available.svg.png"
-    id: team_logo
-    format: PNG
+image:
+  - file: ${logo_base_path}/timbers.png
+    id: timbers_logo_image
     resize: 32x32
     type: RGB565
-    update_interval: never
-    on_download_finished:
-      - lambda: |-
-          if (id(requested_logo_source) == "timbers") id(timbers_logo_downloaded) = true;
-          if (id(requested_logo_source) == "hurricanes") id(hurricanes_logo_downloaded) = true;
-          if (id(requested_logo_source) == "rangers") id(rangers_logo_downloaded) = true;
-          if (id(requested_logo_source) == "avalanche") id(avalanche_logo_downloaded) = true;
-          if (id(requested_logo_source) == "canadiens") id(canadiens_logo_downloaded) = true;
-      - component.update: led_matrix_display
-      - component.update: downloaded_logos
-      on_error:
-        - lambda: |-
-          id(selected_team_logo_url).clear();
-          id(last_team_logo_url).clear();
-        - component.update: led_matrix_display
+  - file: ${logo_base_path}/canes.png
+    id: hurricanes_logo_image
+    resize: 32x32
+    type: RGB565
+  - file: ${logo_base_path}/rangers.png
+    id: rangers_logo_image
+    resize: 32x32
+    type: RGB565
+  - file: ${logo_base_path}/avalanche.png
+    id: avalanche_logo_image
+    resize: 32x32
+    type: RGB565
+  - file: ${logo_base_path}/canadiens.png
+    id: canadiens_logo_image
+    resize: 32x32
+    type: RGB565
+  - file: ${logo_base_path}/blank.png
+    id: blank_logo_image
+    resize: 32x32
+    type: RGB565
 
 light:
   - platform: esp32_rmt_led_strip
@@ -383,4 +356,26 @@ display:
       if (id(selected_logo_source) == "Off") {
         return;
       }
-      it.image(0, 0, id(team_logo));
+      if (id(selected_logo_source) == "Portland Timbers") {
+        it.image(0, 0, id(timbers_logo_image));
+      } else if (id(selected_logo_source) == "Carolina Hurricanes") {
+        it.image(0, 0, id(hurricanes_logo_image));
+      } else if (id(selected_logo_source) == "New York Rangers") {
+        it.image(0, 0, id(rangers_logo_image));
+      } else if (id(selected_logo_source) == "Colorado Avalanche") {
+        it.image(0, 0, id(avalanche_logo_image));
+      } else if (id(selected_logo_source) == "Montreal Canadiens") {
+        it.image(0, 0, id(canadiens_logo_image));
+      } else if (id(requested_logo_source) == "timbers") {
+        it.image(0, 0, id(timbers_logo_image));
+      } else if (id(requested_logo_source) == "hurricanes") {
+        it.image(0, 0, id(hurricanes_logo_image));
+      } else if (id(requested_logo_source) == "rangers") {
+        it.image(0, 0, id(rangers_logo_image));
+      } else if (id(requested_logo_source) == "avalanche") {
+        it.image(0, 0, id(avalanche_logo_image));
+      } else if (id(requested_logo_source) == "canadiens") {
+        it.image(0, 0, id(canadiens_logo_image));
+      } else {
+        it.image(0, 0, id(blank_logo_image));
+      }
