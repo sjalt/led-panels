@@ -20,6 +20,13 @@ esphome:
   friendly_name: livingroom_led_display
   min_version: 2026.4.0
   name_add_mac_suffix: false
+  on_boot:
+    priority: -100
+    then:
+      - lambda: |-
+          auto call = id(panel_leds).turn_on();
+          call.set_brightness(id(matrix_brightness_percent));
+          call.perform();
 
 esp32:
   variant: esp32c3
@@ -47,10 +54,22 @@ globals:
     type: std::string
     restore_value: no
     initial_value: '""'
+  - id: current_logo_key
+    type: std::string
+    restore_value: no
+    initial_value: '"blank"'
+  - id: needs_blank_frame
+    type: bool
+    restore_value: no
+    initial_value: "false"
   - id: selected_logo_source
     type: std::string
     restore_value: yes
     initial_value: '"Auto"'
+  - id: matrix_brightness_percent
+    type: float
+    restore_value: yes
+    initial_value: "0.40"
   - id: requested_logo_source
     type: std::string
     restore_value: no
@@ -94,6 +113,24 @@ select:
       - lambda: |-
           id(selected_logo_source) = x;
       - script.execute: select_team_logo
+
+number:
+  - platform: template
+    id: matrix_brightness
+    name: Matrix Brightness
+    min_value: 1
+    max_value: 100
+    step: 1
+    mode: slider
+    optimistic: true
+    restore_value: true
+    initial_value: 40
+    set_action:
+      - lambda: |-
+          id(matrix_brightness_percent) = x / 100.0f;
+          auto call = id(panel_leds).turn_on();
+          call.set_brightness(id(matrix_brightness_percent));
+          call.perform();
 
 script:
   - id: select_team_logo
@@ -175,6 +212,30 @@ script:
 
           id(requested_logo_source) = selected_team;
 
+          std::string target_logo_key = "blank";
+          if (id(selected_logo_source) == "Off") {
+            target_logo_key = "off";
+          } else if (id(selected_logo_source) == "Portland Timbers") {
+            target_logo_key = "timbers";
+          } else if (id(selected_logo_source) == "Carolina Hurricanes") {
+            target_logo_key = "hurricanes";
+          } else if (id(selected_logo_source) == "New York Rangers") {
+            target_logo_key = "rangers";
+          } else if (id(selected_logo_source) == "Colorado Avalanche") {
+            target_logo_key = "avalanche";
+          } else if (id(selected_logo_source) == "Montreal Canadiens") {
+            target_logo_key = "canadiens";
+          } else if (!id(requested_logo_source).empty()) {
+            target_logo_key = id(requested_logo_source);
+          }
+
+          if (target_logo_key != id(current_logo_key)) {
+            id(current_logo_key) = target_logo_key;
+            id(needs_blank_frame) = true;
+          }
+
+      - component.update: led_matrix_display
+      - delay: 25ms
       - component.update: led_matrix_display
 
 text_sensor:
@@ -330,7 +391,8 @@ light:
     rgb_order: GRB
     num_leds: 1024
     name: "Living Room LED Matrix"
-    restore_mode: ALWAYS_OFF
+    restore_mode: RESTORE_DEFAULT_ON
+    default_transition_length: 0s
 
 display:
   - platform: addressable_light
@@ -353,28 +415,22 @@ display:
       return panel_base + (col_from_right * 8) + local_y;
     lambda: |-
       it.fill(Color::BLACK);
-      if (id(selected_logo_source) == "Off") {
+      if (id(needs_blank_frame)) {
+        id(needs_blank_frame) = false;
         return;
       }
-      if (id(selected_logo_source) == "Portland Timbers") {
+      if (id(current_logo_key) == "off") {
+        return;
+      }
+      if (id(current_logo_key) == "timbers") {
         it.image(0, 0, id(timbers_logo_image));
-      } else if (id(selected_logo_source) == "Carolina Hurricanes") {
+      } else if (id(current_logo_key) == "hurricanes") {
         it.image(0, 0, id(hurricanes_logo_image));
-      } else if (id(selected_logo_source) == "New York Rangers") {
+      } else if (id(current_logo_key) == "rangers") {
         it.image(0, 0, id(rangers_logo_image));
-      } else if (id(selected_logo_source) == "Colorado Avalanche") {
+      } else if (id(current_logo_key) == "avalanche") {
         it.image(0, 0, id(avalanche_logo_image));
-      } else if (id(selected_logo_source) == "Montreal Canadiens") {
-        it.image(0, 0, id(canadiens_logo_image));
-      } else if (id(requested_logo_source) == "timbers") {
-        it.image(0, 0, id(timbers_logo_image));
-      } else if (id(requested_logo_source) == "hurricanes") {
-        it.image(0, 0, id(hurricanes_logo_image));
-      } else if (id(requested_logo_source) == "rangers") {
-        it.image(0, 0, id(rangers_logo_image));
-      } else if (id(requested_logo_source) == "avalanche") {
-        it.image(0, 0, id(avalanche_logo_image));
-      } else if (id(requested_logo_source) == "canadiens") {
+      } else if (id(current_logo_key) == "canadiens") {
         it.image(0, 0, id(canadiens_logo_image));
       } else {
         it.image(0, 0, id(blank_logo_image));
