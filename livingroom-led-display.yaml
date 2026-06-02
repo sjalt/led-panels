@@ -1,0 +1,259 @@
+# this yaml is for the living room LED display using ESPHome on home assistant. 
+# it is connected to four 8x32 panels arranged as a 32x32 grid.
+# the goal is to have this display the logo of the current sports team playing via the team tracker integration
+substitutions:
+  panel_data_pin: GPIO2
+  matrix_width: "32"
+  matrix_height: "32"
+  # Attribute containing the current game's team logo URL.
+  team_logo_attribute: team_logo
+  timbers_tracker_entity: sensor.mls_portland_timbers
+  hurricanes_tracker_entity: sensor.nhl_carolina_hurricanes
+  rangers_tracker_entity: sensor.nhl_new_york_rangers
+  avalanche_tracker_entity: sensor.nhl_colorado_avalanche
+  canadiens_tracker_entity: sensor.nhl_montreal_canadiens
+
+esphome:
+  name: "livingroom-led-display"
+  friendly_name: livingroom_led_display
+  min_version: 2026.4.0
+  name_add_mac_suffix: false
+
+esp32:
+  variant: esp32c3
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+# Allow Over-The-Air updates
+ota:
+- platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  on_connect:
+    - script.execute: select_team_logo
+
+http_request:
+
+globals:
+  - id: selected_team_logo_url
+    type: std::string
+    restore_value: no
+    initial_value: '""'
+
+script:
+  - id: select_team_logo
+    mode: restart
+    then:
+      - lambda: |-
+          std::string selected_url;
+
+          auto is_active_game = [](const std::string &state) {
+            return !state.empty() && state != "PRE" && state != "POST" && state != "FINAL";
+          };
+
+          auto try_active = [&](const std::string &state, const std::string &url) {
+            if (selected_url.empty() && is_active_game(state) && !url.empty()) {
+              selected_url = url;
+            }
+          };
+
+          auto try_postseason_pre = [&](const std::string &state, const std::string &season, const std::string &url) {
+            if (selected_url.empty() && state == "PRE" && season == "post-season" && !url.empty()) {
+              selected_url = url;
+            }
+          };
+
+          auto try_pre = [&](const std::string &state, const std::string &url) {
+            if (selected_url.empty() && state == "PRE" && !url.empty()) {
+              selected_url = url;
+            }
+          };
+
+          try_active(id(timbers_state).state, id(timbers_logo).state);
+          try_active(id(hurricanes_state).state, id(hurricanes_logo).state);
+          try_active(id(rangers_state).state, id(rangers_logo).state);
+          try_active(id(avalanche_state).state, id(avalanche_logo).state);
+          try_active(id(canadiens_state).state, id(canadiens_logo).state);
+
+          if (selected_url.empty()) {
+            try_postseason_pre(id(timbers_state).state, id(timbers_season).state, id(timbers_logo).state);
+            try_postseason_pre(id(hurricanes_state).state, id(hurricanes_season).state, id(hurricanes_logo).state);
+            try_postseason_pre(id(rangers_state).state, id(rangers_season).state, id(rangers_logo).state);
+            try_postseason_pre(id(avalanche_state).state, id(avalanche_season).state, id(avalanche_logo).state);
+            try_postseason_pre(id(canadiens_state).state, id(canadiens_season).state, id(canadiens_logo).state);
+          }
+
+          if (selected_url.empty()) {
+            try_pre(id(timbers_state).state, id(timbers_logo).state);
+            try_pre(id(hurricanes_state).state, id(hurricanes_logo).state);
+            try_pre(id(rangers_state).state, id(rangers_logo).state);
+            try_pre(id(avalanche_state).state, id(avalanche_logo).state);
+            try_pre(id(canadiens_state).state, id(canadiens_logo).state);
+          }
+
+          id(selected_team_logo_url) = selected_url;
+
+      - if:
+          condition:
+            lambda: |-
+              return !id(selected_team_logo_url).empty();
+          then:
+            - online_image.set_url:
+                id: team_logo
+                url: !lambda |-
+                  return id(selected_team_logo_url);
+                update: true
+
+text_sensor:
+  - platform: homeassistant
+    id: timbers_state
+    entity_id: ${timbers_tracker_entity}
+    on_value:
+      then:
+        - script.execute: select_team_logo
+  - platform: homeassistant
+    id: timbers_season
+    entity_id: ${timbers_tracker_entity}
+    attribute: season
+    on_value:
+      then:
+        - script.execute: select_team_logo
+  - platform: homeassistant
+    id: timbers_logo
+    entity_id: ${timbers_tracker_entity}
+    attribute: ${team_logo_attribute}
+    on_value:
+      then:
+        - script.execute: select_team_logo
+
+  - platform: homeassistant
+    id: hurricanes_state
+    entity_id: ${hurricanes_tracker_entity}
+    on_value:
+      then:
+        - script.execute: select_team_logo
+  - platform: homeassistant
+    id: hurricanes_season
+    entity_id: ${hurricanes_tracker_entity}
+    attribute: season
+    on_value:
+      then:
+        - script.execute: select_team_logo
+  - platform: homeassistant
+    id: hurricanes_logo
+    entity_id: ${hurricanes_tracker_entity}
+    attribute: ${team_logo_attribute}
+    on_value:
+      then:
+        - script.execute: select_team_logo
+
+  - platform: homeassistant
+    id: rangers_state
+    entity_id: ${rangers_tracker_entity}
+    on_value:
+      then:
+        - script.execute: select_team_logo
+  - platform: homeassistant
+    id: rangers_season
+    entity_id: ${rangers_tracker_entity}
+    attribute: season
+    on_value:
+      then:
+        - script.execute: select_team_logo
+  - platform: homeassistant
+    id: rangers_logo
+    entity_id: ${rangers_tracker_entity}
+    attribute: ${team_logo_attribute}
+    on_value:
+      then:
+        - script.execute: select_team_logo
+
+  - platform: homeassistant
+    id: avalanche_state
+    entity_id: ${avalanche_tracker_entity}
+    on_value:
+      then:
+        - script.execute: select_team_logo
+  - platform: homeassistant
+    id: avalanche_season
+    entity_id: ${avalanche_tracker_entity}
+    attribute: season
+    on_value:
+      then:
+        - script.execute: select_team_logo
+  - platform: homeassistant
+    id: avalanche_logo
+    entity_id: ${avalanche_tracker_entity}
+    attribute: ${team_logo_attribute}
+    on_value:
+      then:
+        - script.execute: select_team_logo
+
+  - platform: homeassistant
+    id: canadiens_state
+    entity_id: ${canadiens_tracker_entity}
+    on_value:
+      then:
+        - script.execute: select_team_logo
+  - platform: homeassistant
+    id: canadiens_season
+    entity_id: ${canadiens_tracker_entity}
+    attribute: season
+    on_value:
+      then:
+        - script.execute: select_team_logo
+  - platform: homeassistant
+    id: canadiens_logo
+    entity_id: ${canadiens_tracker_entity}
+    attribute: ${team_logo_attribute}
+    on_value:
+      then:
+        - script.execute: select_team_logo
+
+online_image:
+  - url: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/64px-No_image_available.svg.png"
+    id: team_logo
+    format: PNG
+    resize: 32x32
+    type: RGB565
+    update_interval: never
+    on_download_finished:
+      - component.update: led_matrix_display
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: panel_leds
+    pin: ${panel_data_pin}
+    chipset: ws2812
+    rgb_order: GRB
+    num_leds: 1024
+    name: "Living Room LED Matrix"
+    restore_mode: ALWAYS_OFF
+
+display:
+  - platform: addressable_light
+    id: led_matrix_display
+    addressable_light_id: panel_leds
+    width: ${matrix_width}
+    height: ${matrix_height}
+    update_interval: 1s
+    pixel_mapper: |-
+      // Four 8x32 panels stacked top-to-bottom into one 32x32 matrix.
+      const int panel = y / 8;
+      const int local_y = y % 8;
+      const int panel_base = panel * 256;
+      if ((local_y % 2) == 0) {
+        return panel_base + (local_y * 32) + x;
+      }
+      return panel_base + (local_y * 32) + (31 - x);
+    lambda: |-
+      it.fill(Color::BLACK);
+      it.image(0, 0, id(team_logo));
