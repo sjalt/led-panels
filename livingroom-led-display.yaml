@@ -99,6 +99,14 @@ globals:
     type: bool
     restore_value: no
     initial_value: "true"
+  - id: flash_red_active
+    type: bool
+    restore_value: no
+    initial_value: "false"
+  - id: flash_red_show_red
+    type: bool
+    restore_value: no
+    initial_value: "false"
 
 select:
   - platform: template
@@ -116,6 +124,23 @@ select:
     set_action:
       - lambda: |-
           id(selected_logo_source) = x;
+      - script.execute: select_team_logo
+
+switch:
+  - platform: template
+    id: flash_red_override
+    name: Flash Red Override
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    turn_on_action:
+      - lambda: |-
+          id(flash_red_active) = true;
+          id(flash_red_show_red) = true;
+      - component.update: led_matrix_display
+    turn_off_action:
+      - lambda: |-
+          id(flash_red_active) = false;
+          id(flash_red_show_red) = false;
       - script.execute: select_team_logo
 
 
@@ -421,7 +446,7 @@ display:
     addressable_light_id: panel_leds
     width: ${matrix_width}
     height: ${matrix_height}
-    update_interval: 1s
+    update_interval: 250ms
     pixel_mapper: |-
       // Four 8x32 panels stacked top-to-bottom into one 32x32 matrix.
       // Base mapping for each panel: data enters on the right side,
@@ -449,6 +474,17 @@ display:
         id(needs_blank_frame) = false;
         return;
       }
+
+      if (id(flash_red_active)) {
+        if (id(flash_red_show_red)) {
+          // Show full red at the pixel level, then alternate back to the logo next frame.
+          it.fill(Color(255, 0, 0));
+          id(flash_red_show_red) = false;
+          return;
+        }
+        id(flash_red_show_red) = true;
+      }
+
       if (id(current_logo_key) == "off") {
         return;
       }
