@@ -778,8 +778,93 @@ display:
         return fallback;
       };
 
+      auto is_digit = [](char c) {
+        return c >= '0' && c <= '9';
+      };
+
+      auto two_digit = [](int value) {
+        if (value < 10) {
+          return std::string("0") + std::to_string(value);
+        }
+        return std::to_string(value);
+      };
+
+      auto is_leap_year = [](int year) {
+        if ((year % 400) == 0) {
+          return true;
+        }
+        if ((year % 100) == 0) {
+          return false;
+        }
+        return (year % 4) == 0;
+      };
+
+      auto days_in_month = [&](int year, int month) {
+        static const int month_lengths[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+        int days = month_lengths[month - 1];
+        if (month == 2 && is_leap_year(year)) {
+          days = 29;
+        }
+        return days;
+      };
+
+      auto format_utc_to_pdt = [&](const std::string &raw) {
+        // Expected input: YYYY-MM-DDTHH:MMZ
+        if (raw.size() < 16) {
+          return raw;
+        }
+        if (raw[4] != '-' || raw[7] != '-' || raw[10] != 'T' || raw[13] != ':') {
+          return raw;
+        }
+
+        const int digit_positions[] = {0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15};
+        for (int idx : digit_positions) {
+          if (!is_digit(raw[idx])) {
+            return raw;
+          }
+        }
+
+        int year = atoi(raw.substr(0, 4).c_str());
+        int month = atoi(raw.substr(5, 2).c_str());
+        int day = atoi(raw.substr(8, 2).c_str());
+        int hour = atoi(raw.substr(11, 2).c_str());
+        const int minute = atoi(raw.substr(14, 2).c_str());
+
+        if (month < 1 || month > 12 || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+          return raw;
+        }
+        if (day < 1 || day > days_in_month(year, month)) {
+          return raw;
+        }
+
+        // User requested PDT display, so apply a fixed UTC-7 offset.
+        hour -= 7;
+        while (hour < 0) {
+          hour += 24;
+          day -= 1;
+          if (day < 1) {
+            month -= 1;
+            if (month < 1) {
+              month = 12;
+              year -= 1;
+            }
+            day = days_in_month(year, month);
+          }
+        }
+
+        const bool is_pm = hour >= 12;
+        int hour_12 = hour % 12;
+        if (hour_12 == 0) {
+          hour_12 = 12;
+        }
+
+        const std::string am_pm = is_pm ? "PM" : "AM";
+        const int year_short = year % 100;
+        return std::to_string(month) + "/" + std::to_string(day) + "/" + two_digit(year_short) + " " + two_digit(hour_12) + ":" + two_digit(minute) + " " + am_pm;
+      };
+
       if (tracker_state == "PRE") {
-        std::string scroll_text = next_game_datetime;
+        std::string scroll_text = next_game_datetime.empty() ? next_game_datetime : format_utc_to_pdt(next_game_datetime);
         if (scroll_text.empty()) {
           scroll_text = "NEXT GAME";
         }
