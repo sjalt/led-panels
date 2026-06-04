@@ -25,7 +25,7 @@ esphome:
     then:
       - lambda: |-
           auto call = id(panel_leds).turn_on();
-          call.set_brightness(id(matrix_brightness_percent));
+          //call.set_brightness(id(matrix_brightness_percent));
           call.perform();
 
 esp32:
@@ -49,6 +49,11 @@ wifi:
   on_connect:
     - script.execute: select_team_logo
 
+interval:
+  - interval: 15min
+    then:
+      - script.execute: select_team_logo
+
 globals:
   - id: last_team_logo_url
     type: std::string
@@ -66,10 +71,10 @@ globals:
     type: std::string
     restore_value: yes
     initial_value: '"Auto"'
-  - id: matrix_brightness_percent
-    type: float
-    restore_value: yes
-    initial_value: "0.40"
+  # - id: matrix_brightness_percent
+  #   type: float
+  #   restore_value: yes
+  #   initial_value: "0.40"
   - id: requested_logo_source
     type: std::string
     restore_value: no
@@ -103,7 +108,6 @@ select:
     initial_option: Auto
     options:
       - "Auto"
-      - "Off"
       - "Portland Timbers"
       - "Carolina Hurricanes"
       - "New York Rangers"
@@ -114,23 +118,6 @@ select:
           id(selected_logo_source) = x;
       - script.execute: select_team_logo
 
-number:
-  - platform: template
-    id: matrix_brightness
-    name: Matrix Brightness
-    min_value: 1
-    max_value: 100
-    step: 1
-    mode: slider
-    optimistic: true
-    restore_value: true
-    initial_value: 40
-    set_action:
-      - lambda: |-
-          id(matrix_brightness_percent) = x / 100.0f;
-          auto call = id(panel_leds).turn_on();
-          call.set_brightness(id(matrix_brightness_percent));
-          call.perform();
 
 script:
   - id: select_team_logo
@@ -138,20 +125,15 @@ script:
     then:
       - lambda: |-
           std::string selected_team;
-
-          if (id(selected_logo_source) == "Off") {
-            id(requested_logo_source) = "";
-            id(last_team_logo_url).clear();
-            id(selected_logo_source) = "Off";
-            return;
-          }
-
+          
+          // First try to select the team based on the selected source, if it's available.
           auto select_if_present = [&](const std::string &name, bool downloaded_ok) {
             if (selected_team.empty() && downloaded_ok) {
               selected_team = name;
             }
           };
 
+          // If a specific team is selected, try to use that if the logo is downloaded.
           if (id(selected_logo_source) == "Portland Timbers") {
             select_if_present("timbers", id(timbers_logo_downloaded));
           } else if (id(selected_logo_source) == "Carolina Hurricanes") {
@@ -164,22 +146,33 @@ script:
             select_if_present("canadiens", id(canadiens_logo_downloaded));
           }
 
+          // Helper to determine if a game state should be considered active/ongoing.
           auto is_active_game = [](const std::string &state) {
-            return !state.empty() && state != "PRE" && state != "POST" && state != "FINAL";
+            return !state.empty() && state != "PRE" && state != "NOT_FOUND" && state != "POST" && state != "FINAL";
+          };
+          
+          // For teams in post-season, prefer showing the logo if the game is in post-season and the logo is downloaded.
+          auto try_postseason_active = [&](const std::string &state, const std::string &season, bool downloaded_ok, const std::string &team) {
+            if (selected_team.empty() && is_active_game(state) && season == "post-season" && downloaded_ok) {
+              selected_team = team;
+            }
           };
 
+          // If no team is selected yet, try to select based on active games regardless of the selected source.
           auto try_active = [&](const std::string &state, bool downloaded_ok, const std::string &team) {
             if (selected_team.empty() && is_active_game(state) && downloaded_ok) {
               selected_team = team;
             }
           };
 
+          // For teams in post-season, prefer showing the logo if the game is in post-season and the logo is downloaded.
           auto try_postseason_pre = [&](const std::string &state, const std::string &season, bool downloaded_ok, const std::string &team) {
             if (selected_team.empty() && state == "PRE" && season == "post-season" && downloaded_ok) {
               selected_team = team;
             }
           };
 
+          // If no team is selected yet, try to select based on pre-game state for post-season games.
           auto try_pre = [&](const std::string &state, bool downloaded_ok, const std::string &team) {
             if (selected_team.empty() && state == "PRE" && downloaded_ok) {
               selected_team = team;
@@ -187,12 +180,21 @@ script:
           };
 
           if (id(selected_logo_source) == "Auto") {
+            // first try active games in post-season
+            try_postseason_active(id(timbers_state).state, id(timbers_season).state, id(timbers_logo_downloaded), "timbers");
+            try_postseason_active(id(hurricanes_state).state, id(hurricanes_season).state, id(hurricanes_logo_downloaded), "hurricanes");
+            try_postseason_active(id(rangers_state).state, id(rangers_season).state, id(rangers_logo_downloaded), "rangers");
+            try_postseason_active(id(avalanche_state).state, id(avalanche_season).state, id(avalanche_logo_downloaded), "avalanche");
+            try_postseason_active(id(canadiens_state).state, id(canadiens_season).state, id(canadiens_logo_downloaded), "canadiens");
+
+            // next try any active games regardless of season
             try_active(id(timbers_state).state, id(timbers_logo_downloaded), "timbers");
             try_active(id(hurricanes_state).state, id(hurricanes_logo_downloaded), "hurricanes");
             try_active(id(rangers_state).state, id(rangers_logo_downloaded), "rangers");
             try_active(id(avalanche_state).state, id(avalanche_logo_downloaded), "avalanche");
             try_active(id(canadiens_state).state, id(canadiens_logo_downloaded), "canadiens");
 
+            // next try pre-game for post-season games
             if (selected_team.empty()) {
               try_postseason_pre(id(timbers_state).state, id(timbers_season).state, id(timbers_logo_downloaded), "timbers");
               try_postseason_pre(id(hurricanes_state).state, id(hurricanes_season).state, id(hurricanes_logo_downloaded), "hurricanes");
@@ -201,6 +203,7 @@ script:
               try_postseason_pre(id(canadiens_state).state, id(canadiens_season).state, id(canadiens_logo_downloaded), "canadiens");
             }
 
+            // finally try any pre-game regardless of season
             if (selected_team.empty()) {
               try_pre(id(timbers_state).state, id(timbers_logo_downloaded), "timbers");
               try_pre(id(hurricanes_state).state, id(hurricanes_logo_downloaded), "hurricanes");
@@ -211,6 +214,7 @@ script:
           }
 
           id(requested_logo_source) = selected_team;
+          
 
           std::string target_logo_key = "blank";
           if (id(selected_logo_source) == "Off") {
@@ -234,6 +238,25 @@ script:
             id(needs_blank_frame) = true;
           }
 
+          
+
+      # set displayed_logo text sensor to the team name for the currently displayed logo (or "Off" if off, or "None" if blank)
+      - lambda: |-
+          if (id(current_logo_key) == "off") {
+            id(displayed_logo).publish_state("Off");
+          } else if (id(current_logo_key) == "timbers") {
+            id(displayed_logo).publish_state("Portland Timbers");
+          } else if (id(current_logo_key) == "hurricanes") {
+            id(displayed_logo).publish_state("Carolina Hurricanes");
+          } else if (id(current_logo_key) == "rangers") {
+            id(displayed_logo).publish_state("New York Rangers");
+          } else if (id(current_logo_key) == "avalanche") {
+            id(displayed_logo).publish_state("Colorado Avalanche");
+          } else if (id(current_logo_key) == "canadiens") {
+            id(displayed_logo).publish_state("Montreal Canadiens");
+          } else {
+            id(displayed_logo).publish_state("None");
+          }
       - component.update: led_matrix_display
       - delay: 25ms
       - component.update: led_matrix_display
@@ -345,18 +368,16 @@ text_sensor:
         - script.execute: select_team_logo
 
   - platform: template
-    id: available_logos
-    name: Available Logos
-    update_interval: never
-    lambda: |-
-      std::string value = "";
-      value += "Portland Timbers, ";
-      value += "Carolina Hurricanes, ";
-      value += "New York Rangers, ";
-      value += "Colorado Avalanche, ";
-      value += "Montreal Canadiens";
-      return value;
+    name: "Displayed Logo"
+    id: displayed_logo
+    icon: "mdi:format-list-bulleted"
+    
+    # only update when the logo changes
+    update_interval: 0s
 
+
+
+# Pre-load the team logos as images in ESPHome so they can be displayed on the LED matrix without needing to download them at runtime.
 image:
   - file: ${logo_base_path}/timbers.png
     id: timbers_logo_image
@@ -403,16 +424,25 @@ display:
     update_interval: 1s
     pixel_mapper: |-
       // Four 8x32 panels stacked top-to-bottom into one 32x32 matrix.
-      // Panel mapping matches the diagram: data enters on the right side,
+      // Base mapping for each panel: data enters on the right side,
       // columns run right-to-left, and each column snakes top/bottom.
+      // Odd panels are physically rotated 180 degrees.
       const int panel = y / 8;
       const int local_y = y % 8;
       const int panel_base = panel * 256;
-      const int col_from_right = 31 - x;
-      if ((col_from_right % 2) == 0) {
-        return panel_base + (col_from_right * 8) + (7 - local_y);
+      int mapped_x = x;
+      int mapped_y = local_y;
+
+      if ((panel % 2) == 1) {
+        mapped_x = 31 - x;
+        mapped_y = 7 - local_y;
       }
-      return panel_base + (col_from_right * 8) + local_y;
+
+      const int col_from_right = 31 - mapped_x;
+      if ((col_from_right % 2) == 0) {
+        return panel_base + (col_from_right * 8) + (7 - mapped_y);
+      }
+      return panel_base + (col_from_right * 8) + mapped_y;
     lambda: |-
       it.fill(Color::BLACK);
       if (id(needs_blank_frame)) {
