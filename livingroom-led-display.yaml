@@ -472,6 +472,11 @@ text_sensor:
     name: "Displayed Logo"
     id: displayed_logo
     icon: "mdi:format-list-bulleted"
+  # display whats currently on the scoreboard
+  - platform: template
+    name: "Displayed Score"
+    id: displayed_score
+    icon: "mdi:format-list-bulleted"
     
     # only update when the logo changes
 
@@ -480,46 +485,66 @@ sensor:
     id: timbers_team_score
     entity_id: ${timbers_tracker_entity}
     attribute: ${team_score_attribute}
+    filters:
+      - filter_out: nan
   - platform: homeassistant
     id: timbers_opponent_score
     entity_id: ${timbers_tracker_entity}
     attribute: ${opponent_score_attribute}
+    filters:
+      - filter_out: nan
 
   - platform: homeassistant
     id: hurricanes_team_score
     entity_id: ${hurricanes_tracker_entity}
     attribute: ${team_score_attribute}
+    filters:
+      - filter_out: nan
   - platform: homeassistant
     id: hurricanes_opponent_score
     entity_id: ${hurricanes_tracker_entity}
     attribute: ${opponent_score_attribute}
+    filters:
+      - filter_out: nan
 
   - platform: homeassistant
     id: rangers_team_score
     entity_id: ${rangers_tracker_entity}
     attribute: ${team_score_attribute}
+    filters:
+      - filter_out: nan
   - platform: homeassistant
     id: rangers_opponent_score
     entity_id: ${rangers_tracker_entity}
     attribute: ${opponent_score_attribute}
+    filters:
+      - filter_out: nan
 
   - platform: homeassistant
     id: avalanche_team_score
     entity_id: ${avalanche_tracker_entity}
     attribute: ${team_score_attribute}
+    filters:
+      - filter_out: nan
   - platform: homeassistant
     id: avalanche_opponent_score
     entity_id: ${avalanche_tracker_entity}
     attribute: ${opponent_score_attribute}
+    filters:
+      - filter_out: nan
 
   - platform: homeassistant
     id: canadiens_team_score
     entity_id: ${canadiens_tracker_entity}
     attribute: ${team_score_attribute}
+    filters:
+      - filter_out: nan
   - platform: homeassistant
     id: canadiens_opponent_score
     entity_id: ${canadiens_tracker_entity}
     attribute: ${opponent_score_attribute}
+    filters:
+      - filter_out: nan
 
 
 font:
@@ -802,3 +827,7 @@ display:
       // Team score on the left, opponent score on the right.
       it.print(2, 0, id(score_font), team_color, TextAlign::TOP_LEFT, team_score_text.c_str());
       it.print(20, 0, id(score_font), opponent_color, TextAlign::TOP_LEFT, opponent_score_text.c_str());
+
+      // Publish the displayed score as a text sensor in Home Assistant for use in automations or dashboards.
+      std::string displayed_score_text = team_score_text + " - " + opponent_score_text;
+      id(displayed_score).publish_state(displayed_score_text);
