@@ -3,6 +3,7 @@
 # the goal is to have this display the logo of the current sports team playing via the team tracker integration
 substitutions:
   panel_data_pin: GPIO2
+  score_data_pin: GPIO4
   matrix_width: "32"
   matrix_height: "32"
   score_panel_width: "32"
@@ -60,6 +61,16 @@ interval:
   - interval: 15min
     then:
       - script.execute: select_team_logo
+  - interval: 500ms
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return id(flash_red_active);
+          then:
+            - lambda: |-
+                id(flash_red_show_red) = !id(flash_red_show_red);
+            - component.update: led_matrix_display
 
 globals:
   - id: last_team_logo_url
@@ -78,10 +89,6 @@ globals:
     type: std::string
     restore_value: yes
     initial_value: '"Auto"'
-  # - id: matrix_brightness_percent
-  #   type: float
-  #   restore_value: yes
-  #   initial_value: "0.40"
   - id: requested_logo_source
     type: std::string
     restore_value: no
@@ -160,13 +167,15 @@ switch:
       - lambda: |-
           id(flash_red_active) = false;
           id(flash_red_show_red) = false;
-      - script.execute: select_team_logo
+      - component.update: led_matrix_display
 
 
 script:
   - id: select_team_logo
-    mode: restart
+    mode: single
     then:
+      #this script determines which team logo (if any) should be displayed based on the selected source and the current game states, and updates the current_logo_key global variable accordingly. 
+      # It also sets a flag to show a blank frame on the next display update to ensure the logo changes immediately.
       - lambda: |-
           std::string selected_team;
           
@@ -281,52 +290,56 @@ script:
             id(current_logo_key) = target_logo_key;
             id(needs_blank_frame) = true;
           }
-
-          
-
       # set displayed_logo text sensor to the team name for the currently displayed logo (or "Off" if off, or "None" if blank)
       - lambda: |-
           if (id(current_logo_key) == "off") {
-            id(displayed_logo).publish_state("Off");
+            if (id(displayed_logo).state != "Off") {
+              id(displayed_logo).publish_state("Off");
+            }
           } else if (id(current_logo_key) == "timbers") {
-            id(displayed_logo).publish_state("Portland Timbers");
+            if (id(displayed_logo).state != "Portland Timbers") {
+              id(displayed_logo).publish_state("Portland Timbers");
+            }
           } else if (id(current_logo_key) == "hurricanes") {
-            id(displayed_logo).publish_state("Carolina Hurricanes");
+            if (id(displayed_logo).state != "Carolina Hurricanes") {
+              id(displayed_logo).publish_state("Carolina Hurricanes");
+            }
           } else if (id(current_logo_key) == "rangers") {
-            id(displayed_logo).publish_state("New York Rangers");
+            if (id(displayed_logo).state != "New York Rangers") {
+              id(displayed_logo).publish_state("New York Rangers");
+            }
           } else if (id(current_logo_key) == "avalanche") {
-            id(displayed_logo).publish_state("Colorado Avalanche");
+            if (id(displayed_logo).state != "Colorado Avalanche") {
+              id(displayed_logo).publish_state("Colorado Avalanche");
+            }
           } else if (id(current_logo_key) == "canadiens") {
-            id(displayed_logo).publish_state("Montreal Canadiens");
+            if (id(displayed_logo).state != "Montreal Canadiens") {
+              id(displayed_logo).publish_state("Montreal Canadiens");
+            }
           } else {
-            id(displayed_logo).publish_state("None");
+            if (id(displayed_logo).state != "None") {
+              id(displayed_logo).publish_state("None");
+            }
           }
-      - component.update: led_matrix_display
       - delay: 25ms
       - component.update: led_matrix_display
       - component.update: score_matrix_display
-
+      # log that the logo was updated to serial for debugging
+      - lambda: |-
+          ESP_LOGD("main", "Selected logo: %s", id(current_logo_key).c_str());
+          
 text_sensor:
   - platform: homeassistant
     id: timbers_state
     entity_id: ${timbers_tracker_entity}
-    on_value:
-      then:
-        - script.execute: select_team_logo
   - platform: homeassistant
     id: timbers_season
     entity_id: ${timbers_tracker_entity}
     attribute: season
-    on_value:
-      then:
-        - script.execute: select_team_logo
   - platform: homeassistant
     id: timbers_logo
     entity_id: ${timbers_tracker_entity}
     attribute: ${team_logo_attribute}
-    on_value:
-      then:
-        - script.execute: select_team_logo
   - platform: homeassistant
     id: timbers_team_colors
     entity_id: ${timbers_tracker_entity}
@@ -343,23 +356,14 @@ text_sensor:
   - platform: homeassistant
     id: hurricanes_state
     entity_id: ${hurricanes_tracker_entity}
-    on_value:
-      then:
-        - script.execute: select_team_logo
   - platform: homeassistant
     id: hurricanes_season
     entity_id: ${hurricanes_tracker_entity}
     attribute: season
-    on_value:
-      then:
-        - script.execute: select_team_logo
   - platform: homeassistant
     id: hurricanes_logo
     entity_id: ${hurricanes_tracker_entity}
     attribute: ${team_logo_attribute}
-    on_value:
-      then:
-        - script.execute: select_team_logo
   - platform: homeassistant
     id: hurricanes_team_colors
     entity_id: ${hurricanes_tracker_entity}
@@ -376,23 +380,14 @@ text_sensor:
   - platform: homeassistant
     id: rangers_state
     entity_id: ${rangers_tracker_entity}
-    on_value:
-      then:
-        - script.execute: select_team_logo
   - platform: homeassistant
     id: rangers_season
     entity_id: ${rangers_tracker_entity}
     attribute: season
-    on_value:
-      then:
-        - script.execute: select_team_logo
   - platform: homeassistant
     id: rangers_logo
     entity_id: ${rangers_tracker_entity}
     attribute: ${team_logo_attribute}
-    on_value:
-      then:
-        - script.execute: select_team_logo
   - platform: homeassistant
     id: rangers_team_colors
     entity_id: ${rangers_tracker_entity}
@@ -409,23 +404,14 @@ text_sensor:
   - platform: homeassistant
     id: avalanche_state
     entity_id: ${avalanche_tracker_entity}
-    on_value:
-      then:
-        - script.execute: select_team_logo
   - platform: homeassistant
     id: avalanche_season
     entity_id: ${avalanche_tracker_entity}
     attribute: season
-    on_value:
-      then:
-        - script.execute: select_team_logo
   - platform: homeassistant
     id: avalanche_logo
     entity_id: ${avalanche_tracker_entity}
     attribute: ${team_logo_attribute}
-    on_value:
-      then:
-        - script.execute: select_team_logo
   - platform: homeassistant
     id: avalanche_team_colors
     entity_id: ${avalanche_tracker_entity}
@@ -442,23 +428,14 @@ text_sensor:
   - platform: homeassistant
     id: canadiens_state
     entity_id: ${canadiens_tracker_entity}
-    on_value:
-      then:
-        - script.execute: select_team_logo
   - platform: homeassistant
     id: canadiens_season
     entity_id: ${canadiens_tracker_entity}
     attribute: season
-    on_value:
-      then:
-        - script.execute: select_team_logo
   - platform: homeassistant
     id: canadiens_logo
     entity_id: ${canadiens_tracker_entity}
     attribute: ${team_logo_attribute}
-    on_value:
-      then:
-        - script.execute: select_team_logo
   - platform: homeassistant
     id: canadiens_team_colors
     entity_id: ${canadiens_tracker_entity}
@@ -569,10 +546,26 @@ light:
     pin: ${panel_data_pin}
     chipset: ws2812
     rgb_order: GRB
-    num_leds: 1280
+    num_leds: 1024
     name: "Living Room LED Panels"
     restore_mode: RESTORE_DEFAULT_ON
     default_transition_length: 0s
+    max_refresh_rate: 16ms
+    use_dma : true
+    rmt_symbols: 48
+
+  - platform: esp32_rmt_led_strip
+    id: score_panel_leds
+    pin: ${score_data_pin}
+    chipset: ws2812
+    rgb_order: GRB
+    num_leds: 256
+    name: "Living Room Score Panels"
+    restore_mode: RESTORE_DEFAULT_ON
+    default_transition_length: 0s
+    max_refresh_rate: 16ms
+    use_dma : true
+    rmt_symbols: 48
 
 display:
   - platform: addressable_light
@@ -580,7 +573,6 @@ display:
     addressable_light_id: panel_leds
     width: ${matrix_width}
     height: ${matrix_height}
-    update_interval: 250ms
     pixel_mapper: |-
       // Four 8x32 panels stacked top-to-bottom into one 32x32 matrix.
       // Base mapping for each panel: data enters on the right side,
@@ -611,12 +603,9 @@ display:
 
       if (id(flash_red_active)) {
         if (id(flash_red_show_red)) {
-          // Show full red at the pixel level, then alternate back to the logo next frame.
           it.fill(Color(255, 0, 0));
-          id(flash_red_show_red) = false;
           return;
         }
-        id(flash_red_show_red) = true;
       }
 
       if (id(current_logo_key) == "off") {
@@ -638,18 +627,18 @@ display:
 
   - platform: addressable_light
     id: score_matrix_display
-    addressable_light_id: panel_leds
+    addressable_light_id: score_panel_leds
     width: ${score_panel_width}
     height: ${score_panel_height}
-    update_interval: 120ms
+    update_interval: 500ms
     pixel_mapper: |-
-      // Separate 8x32 panel chained after the 32x32 matrix LEDs.
+      // Separate 8x32 panel on its own data pin.
       // This panel uses the same right-to-left serpentine column layout.
       const int col_from_right = 31 - x;
       if ((col_from_right % 2) == 0) {
-        return 1024 + (col_from_right * 8) + (7 - y);
+        return (col_from_right * 8) + (7 - y);
       }
-      return 1024 + (col_from_right * 8) + y;
+      return (col_from_right * 8) + y;
     lambda: |-
       it.fill(Color::BLACK);
 
