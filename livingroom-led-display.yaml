@@ -551,7 +551,7 @@ light:
     restore_mode: RESTORE_DEFAULT_ON
     default_transition_length: 0s
     max_refresh_rate: 16ms
-    use_dma : true
+    # use_dma : true
     rmt_symbols: 48
 
   - platform: esp32_rmt_led_strip
@@ -564,7 +564,7 @@ light:
     restore_mode: RESTORE_DEFAULT_ON
     default_transition_length: 0s
     max_refresh_rate: 16ms
-    use_dma : true
+    # use_dma : true
     rmt_symbols: 48
 
 display:
