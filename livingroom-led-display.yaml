@@ -93,26 +93,6 @@ globals:
     type: std::string
     restore_value: no
     initial_value: '""'
-  - id: timbers_logo_downloaded
-    type: bool
-    restore_value: no
-    initial_value: "true"
-  - id: hurricanes_logo_downloaded
-    type: bool
-    restore_value: no
-    initial_value: "true"
-  - id: rangers_logo_downloaded
-    type: bool
-    restore_value: no
-    initial_value: "true"
-  - id: avalanche_logo_downloaded
-    type: bool
-    restore_value: no
-    initial_value: "true"
-  - id: canadiens_logo_downloaded
-    type: bool
-    restore_value: no
-    initial_value: "true"
   - id: flash_red_active
     type: bool
     restore_value: no
@@ -139,7 +119,7 @@ select:
     id: logo_source
     name: Logo Source
     optimistic: true
-    initial_option: Auto
+    initial_option: "Auto"
     options:
       - "Auto"
       - "Portland Timbers"
@@ -179,100 +159,92 @@ script:
       - lambda: |-
           std::string selected_team;
           
-          // First try to select the team based on the selected source, if it's available.
-          auto select_if_present = [&](const std::string &name, bool downloaded_ok) {
-            if (selected_team.empty() && downloaded_ok) {
-              selected_team = name;
-            }
-          };
-
-          // If a specific team is selected, try to use that if the logo is downloaded.
-          if (id(selected_logo_source) == "Portland Timbers") {
-            select_if_present("timbers", id(timbers_logo_downloaded));
-          } else if (id(selected_logo_source) == "Carolina Hurricanes") {
-            select_if_present("hurricanes", id(hurricanes_logo_downloaded));
-          } else if (id(selected_logo_source) == "New York Rangers") {
-            select_if_present("rangers", id(rangers_logo_downloaded));
-          } else if (id(selected_logo_source) == "Colorado Avalanche") {
-            select_if_present("avalanche", id(avalanche_logo_downloaded));
-          } else if (id(selected_logo_source) == "Montreal Canadiens") {
-            select_if_present("canadiens", id(canadiens_logo_downloaded));
+          if(id(selected_logo_source) == "Off") {
+            selected_team = "off";
           }
 
-          // Helper to determine if a game state should be considered active/ongoing.
-          auto is_active_game = [](const std::string &state) {
-            return !state.empty() && state != "PRE" && state != "NOT_FOUND" && state != "POST" && state != "FINAL";
-          };
-          
-          // For teams in post-season, prefer showing the logo if the game is in post-season and the logo is downloaded.
-          auto try_postseason_active = [&](const std::string &state, const std::string &season, bool downloaded_ok, const std::string &team) {
-            if (selected_team.empty() && is_active_game(state) && season == "post-season" && downloaded_ok) {
-              selected_team = team;
-            }
-          };
+          // if the selected source is "Auto", determine which team to show based on the current game states and seasons. Prioritize active games in post-season, then any active games, then pre-game for post-season, then any pre-game.
 
-          // If no team is selected yet, try to select based on active games regardless of the selected source.
-          auto try_active = [&](const std::string &state, bool downloaded_ok, const std::string &team) {
-            if (selected_team.empty() && is_active_game(state) && downloaded_ok) {
-              selected_team = team;
-            }
-          };
 
-          // For teams in post-season, prefer showing the logo if the game is in post-season and the logo is downloaded.
-          auto try_postseason_pre = [&](const std::string &state, const std::string &season, bool downloaded_ok, const std::string &team) {
-            if (selected_team.empty() && state == "PRE" && season == "post-season" && downloaded_ok) {
-              selected_team = team;
-            }
-          };
+          if(id(selected_logo_source) == "Auto") {
 
-          // If no team is selected yet, try to select based on pre-game state for post-season games.
-          auto try_pre = [&](const std::string &state, bool downloaded_ok, const std::string &team) {
-            if (selected_team.empty() && state == "PRE" && downloaded_ok) {
-              selected_team = team;
-            }
-          };
+            // For teams in post-season, prefer showing the logo if the game is in post-season.
+            auto try_postseason_active = [&](const std::string &state, const std::string &season, const std::string &team) {
+              if (selected_team.empty() && state == "IN" && season == "post-season") {
+                selected_team = team;
+              }
+            };
 
-          if (id(selected_logo_source) == "Auto") {
+            // If no team is selected yet, try to select based on active games regardless of the selected source.
+            auto try_active = [&](const std::string &state, const std::string &team) {
+              if (selected_team.empty() && state == "IN") {
+                selected_team = team;
+              }
+            };
+
+            // For teams in post-season, prefer showing the logo if the game is in post-season.
+            auto try_postseason_pre = [&](const std::string &state, const std::string &season, const std::string &team) {
+              if (selected_team.empty() && state == "PRE" && season == "post-season") {
+                selected_team = team;
+              }
+            };
+
+            // If no team is selected yet, try to select based on pre-game state for post-season games.
+            auto try_pre = [&](const std::string &state, const std::string &team) {
+              if (selected_team.empty() && state == "PRE") {
+                selected_team = team;
+              }
+            };
+
             // first try active games in post-season
-            try_postseason_active(id(timbers_state).state, id(timbers_season).state, id(timbers_logo_downloaded), "timbers");
-            try_postseason_active(id(hurricanes_state).state, id(hurricanes_season).state, id(hurricanes_logo_downloaded), "hurricanes");
-            try_postseason_active(id(rangers_state).state, id(rangers_season).state, id(rangers_logo_downloaded), "rangers");
-            try_postseason_active(id(avalanche_state).state, id(avalanche_season).state, id(avalanche_logo_downloaded), "avalanche");
-            try_postseason_active(id(canadiens_state).state, id(canadiens_season).state, id(canadiens_logo_downloaded), "canadiens");
+            try_postseason_active(id(timbers_state).state, id(timbers_season).state, "timbers");
+            try_postseason_active(id(hurricanes_state).state, id(hurricanes_season).state, "hurricanes");
+            try_postseason_active(id(rangers_state).state, id(rangers_season).state, "rangers");
+            try_postseason_active(id(avalanche_state).state, id(avalanche_season).state, "avalanche");
+            try_postseason_active(id(canadiens_state).state, id(canadiens_season).state, "canadiens");
 
             // next try any active games regardless of season
-            try_active(id(timbers_state).state, id(timbers_logo_downloaded), "timbers");
-            try_active(id(hurricanes_state).state, id(hurricanes_logo_downloaded), "hurricanes");
-            try_active(id(rangers_state).state, id(rangers_logo_downloaded), "rangers");
-            try_active(id(avalanche_state).state, id(avalanche_logo_downloaded), "avalanche");
-            try_active(id(canadiens_state).state, id(canadiens_logo_downloaded), "canadiens");
+            try_active(id(timbers_state).state, "timbers");
+            try_active(id(hurricanes_state).state, "hurricanes");
+            try_active(id(rangers_state).state, "rangers");
+            try_active(id(avalanche_state).state, "avalanche");
+            try_active(id(canadiens_state).state, "canadiens");
 
             // next try pre-game for post-season games
             if (selected_team.empty()) {
-              try_postseason_pre(id(timbers_state).state, id(timbers_season).state, id(timbers_logo_downloaded), "timbers");
-              try_postseason_pre(id(hurricanes_state).state, id(hurricanes_season).state, id(hurricanes_logo_downloaded), "hurricanes");
-              try_postseason_pre(id(rangers_state).state, id(rangers_season).state, id(rangers_logo_downloaded), "rangers");
-              try_postseason_pre(id(avalanche_state).state, id(avalanche_season).state, id(avalanche_logo_downloaded), "avalanche");
-              try_postseason_pre(id(canadiens_state).state, id(canadiens_season).state, id(canadiens_logo_downloaded), "canadiens");
+              try_postseason_pre(id(timbers_state).state, id(timbers_season).state, "timbers");
+              try_postseason_pre(id(hurricanes_state).state, id(hurricanes_season).state, "hurricanes");
+              try_postseason_pre(id(rangers_state).state, id(rangers_season).state, "rangers");
+              try_postseason_pre(id(avalanche_state).state, id(avalanche_season).state, "avalanche");
+              try_postseason_pre(id(canadiens_state).state, id(canadiens_season).state, "canadiens");
             }
 
             // finally try any pre-game regardless of season
             if (selected_team.empty()) {
-              try_pre(id(timbers_state).state, id(timbers_logo_downloaded), "timbers");
-              try_pre(id(hurricanes_state).state, id(hurricanes_logo_downloaded), "hurricanes");
-              try_pre(id(rangers_state).state, id(rangers_logo_downloaded), "rangers");
-              try_pre(id(avalanche_state).state, id(avalanche_logo_downloaded), "avalanche");
-              try_pre(id(canadiens_state).state, id(canadiens_logo_downloaded), "canadiens");
+              try_pre(id(timbers_state).state, "timbers");
+              try_pre(id(hurricanes_state).state, "hurricanes");
+              try_pre(id(rangers_state).state, "rangers");
+              try_pre(id(avalanche_state).state, "avalanche");
+              try_pre(id(canadiens_state).state, "canadiens");
             }
           }
+
+          // If a specific team is selected, try to use that
+          if (id(selected_logo_source) == "Portland Timbers" ||
+              id(selected_logo_source) == "Carolina Hurricanes" ||
+              id(selected_logo_source) == "New York Rangers" ||
+              id(selected_logo_source) == "Colorado Avalanche" ||
+              id(selected_logo_source) == "Montreal Canadiens") {
+            selected_team = id(selected_logo_source);
+          }
+
+          
 
           id(requested_logo_source) = selected_team;
           
 
           std::string target_logo_key = "blank";
-          if (id(selected_logo_source) == "Off") {
-            target_logo_key = "off";
-          } else if (id(selected_logo_source) == "Portland Timbers") {
+          if (id(selected_logo_source) == "Portland Timbers") {
             target_logo_key = "timbers";
           } else if (id(selected_logo_source) == "Carolina Hurricanes") {
             target_logo_key = "hurricanes";
@@ -286,43 +258,15 @@ script:
             target_logo_key = id(requested_logo_source);
           }
 
+          id(displayed_logo).publish_state(id(requested_logo_source).empty() ? "None" : id(requested_logo_source).c_str());
+
           if (target_logo_key != id(current_logo_key)) {
             id(current_logo_key) = target_logo_key;
             id(needs_blank_frame) = true;
           }
       # set displayed_logo text sensor to the team name for the currently displayed logo (or "Off" if off, or "None" if blank)
-      - lambda: |-
-          if (id(current_logo_key) == "off") {
-            if (id(displayed_logo).state != "Off") {
-              id(displayed_logo).publish_state("Off");
-            }
-          } else if (id(current_logo_key) == "timbers") {
-            if (id(displayed_logo).state != "Portland Timbers") {
-              id(displayed_logo).publish_state("Portland Timbers");
-            }
-          } else if (id(current_logo_key) == "hurricanes") {
-            if (id(displayed_logo).state != "Carolina Hurricanes") {
-              id(displayed_logo).publish_state("Carolina Hurricanes");
-            }
-          } else if (id(current_logo_key) == "rangers") {
-            if (id(displayed_logo).state != "New York Rangers") {
-              id(displayed_logo).publish_state("New York Rangers");
-            }
-          } else if (id(current_logo_key) == "avalanche") {
-            if (id(displayed_logo).state != "Colorado Avalanche") {
-              id(displayed_logo).publish_state("Colorado Avalanche");
-            }
-          } else if (id(current_logo_key) == "canadiens") {
-            if (id(displayed_logo).state != "Montreal Canadiens") {
-              id(displayed_logo).publish_state("Montreal Canadiens");
-            }
-          } else {
-            if (id(displayed_logo).state != "None") {
-              id(displayed_logo).publish_state("None");
-            }
-          }
-      - delay: 25ms
       - component.update: led_matrix_display
+      - delay: 25ms
       - component.update: score_matrix_display
       # log that the logo was updated to serial for debugging
       - lambda: |-
@@ -573,6 +517,8 @@ display:
     addressable_light_id: panel_leds
     width: ${matrix_width}
     height: ${matrix_height}
+    update_interval: 125ms
+    
     pixel_mapper: |-
       // Four 8x32 panels stacked top-to-bottom into one 32x32 matrix.
       // Base mapping for each panel: data enters on the right side,
