@@ -61,7 +61,7 @@ interval:
   - interval: 15min
     then:
       - script.execute: select_team_logo
-  - interval: 500ms
+  - interval: 6min
     then:
       - if:
           condition:
@@ -172,7 +172,7 @@ switch:
 
 script:
   - id: select_team_logo
-    mode: single
+    mode: restart
     then:
       #this script determines which team logo (if any) should be displayed based on the selected source and the current game states, and updates the current_logo_key global variable accordingly. 
       # It also sets a flag to show a blank frame on the next display update to ensure the logo changes immediately.
@@ -507,7 +507,7 @@ text_sensor:
     # only update when the logo changes
 
 font:
-  - file: "gfonts://VT323"
+  - file: "gfonts://Press+Start+2P"
     id: score_font
     size: 8
 
@@ -858,6 +858,7 @@ display:
           scroll_text = "NEXT GAME";
         }
 
+        // If the scroll text has changed, reset the scroll position to start from the right edge.
         if (scroll_text != id(score_scroll_message)) {
           id(score_scroll_message) = scroll_text;
           int x1 = 0;
@@ -865,19 +866,21 @@ display:
           int width = 0;
           int height = 0;
           it.get_text_bounds(0, 0, scroll_text.c_str(), id(score_font), TextAlign::TOP_LEFT, &x1, &y1, &width, &height);
-          id(score_scroll_x) = -width;
+          id(score_scroll_x) = ${score_panel_width};
         }
 
+        // Scroll text left-to-right on the physical panel.
         int x1 = 0;
         int y1 = 0;
         int width = 0;
         int height = 0;
         it.get_text_bounds(0, 0, id(score_scroll_message).c_str(), id(score_font), TextAlign::TOP_LEFT, &x1, &y1, &width, &height);
-
-        it.print(id(score_scroll_x), 0, id(score_font), Color(200, 200, 200), TextAlign::TOP_LEFT, id(score_scroll_message).c_str());
-        id(score_scroll_x) += 1;
-        if (id(score_scroll_x) > ${score_panel_width}) {
-          id(score_scroll_x) = -width;
+        
+        // Draw the scrolling text in a light white color for good contrast against team colors, and to differentiate it from the static score display.
+        it.print(id(score_scroll_x), 0, id(score_font), Color(255, 255, 255), TextAlign::TOP_LEFT, id(score_scroll_message).c_str());
+        id(score_scroll_x) -= 1;
+        if (id(score_scroll_x) < -width) {
+          id(score_scroll_x) = ${score_panel_width};
         }
         publish_displayed_score(scroll_text);
         return;
