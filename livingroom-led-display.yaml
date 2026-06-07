@@ -61,7 +61,7 @@ interval:
   - interval: 15min
     then:
       - script.execute: select_team_logo
-  - interval: 6min
+  - interval: 250ms
     then:
       - if:
           condition:
@@ -494,7 +494,7 @@ light:
     name: "Living Room LED Panels"
     restore_mode: RESTORE_DEFAULT_ON
     default_transition_length: 0s
-    max_refresh_rate: 16ms
+    max_refresh_rate: 125ms
     # use_dma : true
     rmt_symbols: 48
 
@@ -510,6 +510,11 @@ light:
     max_refresh_rate: 16ms
     # use_dma : true
     rmt_symbols: 48
+
+time:
+  - platform: homeassistant
+    id: my_time
+    timezone: "America/Los_Angeles"
 
 display:
   - platform: addressable_light
@@ -576,7 +581,7 @@ display:
     addressable_light_id: score_panel_leds
     width: ${score_panel_width}
     height: ${score_panel_height}
-    update_interval: 500ms
+    update_interval: 50ms
     pixel_mapper: |-
       // Separate 8x32 panel on its own data pin.
       // This panel uses the same right-to-left serpentine column layout.
@@ -594,6 +599,8 @@ display:
           id(displayed_score).publish_state(value);
         }
       };
+
+      
 
       if (id(current_logo_key) == "off" || id(current_logo_key) == "blank") {
         publish_displayed_score("");
@@ -684,33 +691,55 @@ display:
         return;
       }
 
-      auto parse_primary_color = [](const std::string &raw, Color fallback) {
-        for (size_t i = 0; i + 6 < raw.size(); i++) {
+      auto is_hex_char = [](char c) {
+        return ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
+      };
+
+      auto hex_nibble = [](char c) {
+        if (c >= '0' && c <= '9') {
+          return c - '0';
+        }
+        if (c >= 'a' && c <= 'f') {
+          return 10 + (c - 'a');
+        }
+        return 10 + (c - 'A');
+      };
+
+      auto parse_hex_color_at = [&](const std::string &raw, size_t start_index, Color fallback) {
+        for (size_t i = start_index; i + 6 < raw.size(); i++) {
           if (raw[i] != '#') {
             continue;
           }
-          bool all_hex = true;
+          bool valid = true;
           for (size_t j = i + 1; j < i + 7; j++) {
-            const char c = raw[j];
-            const bool is_hex = ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
-            if (!is_hex) {
-              all_hex = false;
+            if (!is_hex_char(raw[j])) {
+              valid = false;
               break;
             }
           }
-          if (!all_hex) {
+          if (!valid) {
             continue;
           }
 
-          const std::string rr = raw.substr(i + 1, 2);
-          const std::string gg = raw.substr(i + 3, 2);
-          const std::string bb = raw.substr(i + 5, 2);
-          const int r = (int) strtol(rr.c_str(), nullptr, 16);
-          const int g = (int) strtol(gg.c_str(), nullptr, 16);
-          const int b = (int) strtol(bb.c_str(), nullptr, 16);
+          const int r = (hex_nibble(raw[i + 1]) * 16) + hex_nibble(raw[i + 2]);
+          const int g = (hex_nibble(raw[i + 3]) * 16) + hex_nibble(raw[i + 4]);
+          const int b = (hex_nibble(raw[i + 5]) * 16) + hex_nibble(raw[i + 6]);
           return Color(r, g, b);
         }
         return fallback;
+      };
+
+      // Parse primary/secondary team colors from strings like "#e30426, #000000".
+      auto parse_primary_color = [&](const std::string &raw, Color fallback) {
+        return parse_hex_color_at(raw, 0, fallback);
+      };
+
+      auto parse_secondary_color = [&](const std::string &raw, Color fallback) {
+        size_t comma_pos = raw.find(',');
+        if (comma_pos == std::string::npos) {
+          return fallback;
+        }
+        return parse_hex_color_at(raw, comma_pos + 1, fallback);
       };
 
       auto is_digit = [](char c) {
@@ -793,9 +822,24 @@ display:
           hour_12 = 12;
         }
 
+        // check to see if it's today, and if so display "TODAY" instead of the date
+        // get current time in UTC, then apply the same UTC-7 offset to compare against the game time
+        auto today_year = id(my_time).now().year;
+        auto today_month = id(my_time).now().month;
+        auto today_day = id(my_time).now().day_of_month;
+
+        // ESP_LOGD("main", "Current time: %04d-%02d-%02d", today_year, today_month, today_day);
+        // ESP_LOGD("main", "Game time: %04d-%02d-%02d", year, month, day);
+        
+        
+        if (year == today_year && month == today_month && day == today_day) {
+          // ESP_LOGD("main", "Game is today");
+          const std::string am_pm = is_pm ? "PM" : "AM";
+          return "TODAY " + two_digit(hour_12) + ":" + two_digit(minute) + "" + am_pm;
+        }
         const std::string am_pm = is_pm ? "PM" : "AM";
         const int year_short = year % 100;
-        return std::to_string(month) + "/" + std::to_string(day) + "/" + two_digit(year_short) + " " + two_digit(hour_12) + ":" + two_digit(minute) + " " + am_pm;
+        return std::to_string(month) + "/" + std::to_string(day) + "/" + two_digit(year_short) + " " + two_digit(hour_12) + ":" + two_digit(minute) + "" + am_pm;
       };
 
       if (tracker_state == "PRE") {
@@ -823,7 +867,7 @@ display:
         it.get_text_bounds(0, 0, id(score_scroll_message).c_str(), id(score_font), TextAlign::TOP_LEFT, &x1, &y1, &width, &height);
         
         // Draw the scrolling text in a light white color for good contrast against team colors, and to differentiate it from the static score display.
-        it.print(id(score_scroll_x), 0, id(score_font), Color(255, 255, 255), TextAlign::TOP_LEFT, id(score_scroll_message).c_str());
+        it.print(id(score_scroll_x), 1, id(score_font), Color(255, 255, 255), TextAlign::TOP_LEFT, id(score_scroll_message).c_str());
         id(score_scroll_x) -= 1;
         if (id(score_scroll_x) < -width) {
           id(score_scroll_x) = ${score_panel_width};
@@ -836,11 +880,20 @@ display:
       id(score_scroll_x) = 0;
 
       const Color team_color = parse_primary_color(team_colors_attr, Color::WHITE);
+      const Color team_secondary_color = parse_secondary_color(team_colors_attr, team_color);
       const Color opponent_color = parse_primary_color(opponent_colors_attr, Color(140, 140, 140));
+      const Color opponent_secondary_color = parse_secondary_color(opponent_colors_attr, opponent_color);
       const std::string team_score_text = has_team_score ? std::to_string(team_score) : "--";
       const std::string opponent_score_text = has_opponent_score ? std::to_string(opponent_score) : "--";
 
       // Team score on the left, opponent score on the right.
+      // first draw background rectangles in the secondary colors for better visibility of the white score text, especially for teams with darker primary colors. Use a smaller rectangle for the team score if the opponent score is not available to help visually differentiate them.
+      if (has_opponent_score) {
+        it.filled_rectangle(0, 0, 16, 8, team_secondary_color);
+        it.filled_rectangle(16, 0, 16, 8, opponent_secondary_color);
+      } else {
+        it.filled_rectangle(0, 0, 32, 8, team_secondary_color);
+      }
       it.print(2, 0, id(score_font), team_color, TextAlign::TOP_LEFT, team_score_text.c_str());
       it.print(20, 0, id(score_font), opponent_color, TextAlign::TOP_LEFT, opponent_score_text.c_str());
 
