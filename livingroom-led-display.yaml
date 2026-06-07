@@ -507,7 +507,7 @@ light:
     name: "Living Room Score Panels"
     restore_mode: RESTORE_DEFAULT_ON
     default_transition_length: 0s
-    max_refresh_rate: 16ms
+    max_refresh_rate: 100ms
     # use_dma : true
     rmt_symbols: 48
 
@@ -522,7 +522,7 @@ display:
     addressable_light_id: panel_leds
     width: ${matrix_width}
     height: ${matrix_height}
-    update_interval: 125ms
+    update_interval: 250ms
     
     pixel_mapper: |-
       // Four 8x32 panels stacked top-to-bottom into one 32x32 matrix.
@@ -581,7 +581,7 @@ display:
     addressable_light_id: score_panel_leds
     width: ${score_panel_width}
     height: ${score_panel_height}
-    update_interval: 50ms
+    update_interval: 100ms
     pixel_mapper: |-
       // Separate 8x32 panel on its own data pin.
       // This panel uses the same right-to-left serpentine column layout.
@@ -747,10 +747,15 @@ display:
       };
 
       auto two_digit = [](int value) {
-        if (value < 10) {
-          return std::string("0") + std::to_string(value);
+        char out[3];
+        if (value < 0) {
+          value = 0;
         }
-        return std::to_string(value);
+        if (value > 99) {
+          value = value % 100;
+        }
+        snprintf(out, sizeof(out), "%02d", value);
+        return std::string(out);
       };
 
       auto is_leap_year = [](int year) {
@@ -835,11 +840,15 @@ display:
         if (year == today_year && month == today_month && day == today_day) {
           // ESP_LOGD("main", "Game is today");
           const std::string am_pm = is_pm ? "PM" : "AM";
-          return "TODAY " + two_digit(hour_12) + ":" + two_digit(minute) + "" + am_pm;
+          char formatted_today[32];
+          snprintf(formatted_today, sizeof(formatted_today), "TODAY %s:%s%s", two_digit(hour_12).c_str(), two_digit(minute).c_str(), am_pm.c_str());
+          return std::string(formatted_today);
         }
         const std::string am_pm = is_pm ? "PM" : "AM";
         const int year_short = year % 100;
-        return std::to_string(month) + "/" + std::to_string(day) + "/" + two_digit(year_short) + " " + two_digit(hour_12) + ":" + two_digit(minute) + "" + am_pm;
+        char formatted_date[40];
+        snprintf(formatted_date, sizeof(formatted_date), "%d/%d/%s %s:%s%s", month, day, two_digit(year_short).c_str(), two_digit(hour_12).c_str(), two_digit(minute).c_str(), am_pm.c_str());
+        return std::string(formatted_date);
       };
 
       if (tracker_state == "PRE") {
@@ -876,27 +885,47 @@ display:
         return;
       }
 
-      id(score_scroll_message) = "";
-      id(score_scroll_x) = 0;
+      if (tracker_state == "FINAL" || tracker_state == "IN") {
+        id(score_scroll_message) = "";
+        id(score_scroll_x) = 0;
 
-      const Color team_color = parse_primary_color(team_colors_attr, Color::WHITE);
-      const Color team_secondary_color = parse_secondary_color(team_colors_attr, team_color);
-      const Color opponent_color = parse_primary_color(opponent_colors_attr, Color(140, 140, 140));
-      const Color opponent_secondary_color = parse_secondary_color(opponent_colors_attr, opponent_color);
-      const std::string team_score_text = has_team_score ? std::to_string(team_score) : "--";
-      const std::string opponent_score_text = has_opponent_score ? std::to_string(opponent_score) : "--";
+        const Color team_color = parse_primary_color(team_colors_attr, Color::WHITE);
+        const Color team_secondary_color = parse_secondary_color(team_colors_attr, team_color);
+        const Color opponent_color = parse_primary_color(opponent_colors_attr, Color(140, 140, 140));
+        const Color opponent_secondary_color = parse_secondary_color(opponent_colors_attr, opponent_color);
+        
+        // log the strings of the team and opponent colors, and their parsed RGB565 values for debugging
+        ESP_LOGD("main", "home colors: '%s' parsed to primary RGB(%d, %d, %d) secondary RGB(%d, %d, %d)", team_colors_attr.c_str(), team_color.r, team_color.g, team_color.b, team_secondary_color.r, team_secondary_color.g, team_secondary_color.b);
+        ESP_LOGD("main", "away colors: '%s' parsed to primary RGB(%d, %d, %d) secondary RGB(%d, %d, %d)", opponent_colors_attr.c_str(), opponent_color.r, opponent_color.g, opponent_color.b, opponent_secondary_color.r, opponent_secondary_color.g, opponent_secondary_color.b);
 
-      // Team score on the left, opponent score on the right.
-      // first draw background rectangles in the secondary colors for better visibility of the white score text, especially for teams with darker primary colors. Use a smaller rectangle for the team score if the opponent score is not available to help visually differentiate them.
-      if (has_opponent_score) {
-        it.filled_rectangle(0, 0, 16, 8, team_secondary_color);
-        it.filled_rectangle(16, 0, 16, 8, opponent_secondary_color);
-      } else {
-        it.filled_rectangle(0, 0, 32, 8, team_secondary_color);
+        char team_score_buf[8];
+        char opponent_score_buf[8];
+        if (has_team_score) {
+          snprintf(team_score_buf, sizeof(team_score_buf), "%d", team_score);
+        } else {
+          snprintf(team_score_buf, sizeof(team_score_buf), "--");
+        }
+        if (has_opponent_score) {
+          snprintf(opponent_score_buf, sizeof(opponent_score_buf), "%d", opponent_score);
+        } else {
+          snprintf(opponent_score_buf, sizeof(opponent_score_buf), "--");
+        }
+        const char *team_score_text = team_score_buf;
+        const char *opponent_score_text = opponent_score_buf;
+
+        // Team score on the left, opponent score on the right.
+        // first draw background rectangles in the secondary colors for better visibility of the white score text, especially for teams with darker primary colors. Use a smaller rectangle for the team score if the opponent score is not available to help visually differentiate them.
+        if (has_opponent_score) {
+          it.filled_rectangle(0, 0, 16, 8, team_secondary_color);
+          it.filled_rectangle(16, 0, 16, 8, opponent_secondary_color);
+        } else {
+          it.filled_rectangle(0, 0, 32, 8, team_secondary_color);
+        }
+        it.print(2, 0, id(score_font), team_color, TextAlign::TOP_LEFT, team_score_text);
+        it.print(20, 0, id(score_font), opponent_color, TextAlign::TOP_LEFT, opponent_score_text);
+
+        // Publish the displayed score as a text sensor in Home Assistant for use in automations or dashboards.
+        char displayed_score_buf[24];
+        snprintf(displayed_score_buf, sizeof(displayed_score_buf), "%s - %s", team_score_text, opponent_score_text);
+        publish_displayed_score(std::string(displayed_score_buf));
       }
-      it.print(2, 0, id(score_font), team_color, TextAlign::TOP_LEFT, team_score_text.c_str());
-      it.print(20, 0, id(score_font), opponent_color, TextAlign::TOP_LEFT, opponent_score_text.c_str());
-
-      // Publish the displayed score as a text sensor in Home Assistant for use in automations or dashboards.
-      std::string displayed_score_text = team_score_text + " - " + opponent_score_text;
-      publish_displayed_score(displayed_score_text);
