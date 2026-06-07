@@ -23,6 +23,8 @@ substitutions:
   avalanche_tracker_entity: sensor.nhl_colorado_avalanche
   canadiens_tracker_entity: sensor.nhl_montreal_canadiens
 
+  room_brightness_sensor: sensor.living_room_occupancy_illuminance
+
 esphome:
   name: "livingroom-led-display"
   friendly_name: livingroom_led_display
@@ -608,80 +610,38 @@ display:
       }
 
       std::string tracker_state;
-      std::string team_colors_attr;
-      std::string opponent_colors_attr;
       std::string next_game_datetime;
-      int team_score = 0;
-      int opponent_score = 0;
-      bool has_team_score = false;
-      bool has_opponent_score = false;
 
-      if (id(current_logo_key) == "timbers") {
-        tracker_state = id(timbers_state).state;
-        team_colors_attr = id(timbers_team_colors).state;
-        opponent_colors_attr = id(timbers_opponent_colors).state;
-        next_game_datetime = id(timbers_next_game_datetime).state;
-        if (id(timbers_team_score).has_state() && id(timbers_team_score).state != "None") {
-          team_score = atoi(id(timbers_team_score).state.c_str());
-          has_team_score = true;
+      auto load_pre_context = [&]() {
+        if (id(current_logo_key) == "timbers") {
+          tracker_state = id(timbers_state).state;
+          next_game_datetime = id(timbers_next_game_datetime).state;
+          return true;
         }
-        if (id(timbers_opponent_score).has_state() && id(timbers_opponent_score).state != "None") {
-          opponent_score = atoi(id(timbers_opponent_score).state.c_str());
-          has_opponent_score = true;
+        if (id(current_logo_key) == "hurricanes") {
+          tracker_state = id(hurricanes_state).state;
+          next_game_datetime = id(hurricanes_next_game_datetime).state;
+          return true;
         }
-      } else if (id(current_logo_key) == "hurricanes") {
-        tracker_state = id(hurricanes_state).state;
-        team_colors_attr = id(hurricanes_team_colors).state;
-        opponent_colors_attr = id(hurricanes_opponent_colors).state;
-        next_game_datetime = id(hurricanes_next_game_datetime).state;
-        if (id(hurricanes_team_score).has_state() && id(hurricanes_team_score).state != "None") {
-          team_score = atoi(id(hurricanes_team_score).state.c_str());
-          has_team_score = true;
+        if (id(current_logo_key) == "rangers") {
+          tracker_state = id(rangers_state).state;
+          next_game_datetime = id(rangers_next_game_datetime).state;
+          return true;
         }
-        if (id(hurricanes_opponent_score).has_state() && id(hurricanes_opponent_score).state != "None") {
-          opponent_score = atoi(id(hurricanes_opponent_score).state.c_str());
-          has_opponent_score = true;
+        if (id(current_logo_key) == "avalanche") {
+          tracker_state = id(avalanche_state).state;
+          next_game_datetime = id(avalanche_next_game_datetime).state;
+          return true;
         }
-      } else if (id(current_logo_key) == "rangers") {
-        tracker_state = id(rangers_state).state;
-        team_colors_attr = id(rangers_team_colors).state;
-        opponent_colors_attr = id(rangers_opponent_colors).state;
-        next_game_datetime = id(rangers_next_game_datetime).state;
-        if (id(rangers_team_score).has_state() && id(rangers_team_score).state != "None") {
-          team_score = atoi(id(rangers_team_score).state.c_str());
-          has_team_score = true;
+        if (id(current_logo_key) == "canadiens") {
+          tracker_state = id(canadiens_state).state;
+          next_game_datetime = id(canadiens_next_game_datetime).state;
+          return true;
         }
-        if (id(rangers_opponent_score).has_state() && id(rangers_opponent_score).state != "None") {
-          opponent_score = atoi(id(rangers_opponent_score).state.c_str());
-          has_opponent_score = true;
-        }
-      } else if (id(current_logo_key) == "avalanche") {
-        tracker_state = id(avalanche_state).state;
-        team_colors_attr = id(avalanche_team_colors).state;
-        opponent_colors_attr = id(avalanche_opponent_colors).state;
-        next_game_datetime = id(avalanche_next_game_datetime).state;
-        if (id(avalanche_team_score).has_state() && id(avalanche_team_score).state != "None") {
-          team_score = atoi(id(avalanche_team_score).state.c_str());
-          has_team_score = true;
-        }
-        if (id(avalanche_opponent_score).has_state() && id(avalanche_opponent_score).state != "None") {
-          opponent_score = atoi(id(avalanche_opponent_score).state.c_str());
-          has_opponent_score = true;
-        }
-      } else if (id(current_logo_key) == "canadiens") {
-        tracker_state = id(canadiens_state).state;
-        team_colors_attr = id(canadiens_team_colors).state;
-        opponent_colors_attr = id(canadiens_opponent_colors).state;
-        next_game_datetime = id(canadiens_next_game_datetime).state;
-        if (id(canadiens_team_score).has_state() && id(canadiens_team_score).state != "None") {
-          team_score = atoi(id(canadiens_team_score).state.c_str());
-          has_team_score = true;
-        }
-        if (id(canadiens_opponent_score).has_state() && id(canadiens_opponent_score).state != "None") {
-          opponent_score = atoi(id(canadiens_opponent_score).state.c_str());
-          has_opponent_score = true;
-        }
-      } else {
+        return false;
+      };
+
+      if (!load_pre_context()) {
         publish_displayed_score("");
         return;
       }
@@ -886,6 +846,87 @@ display:
       }
 
       if (tracker_state == "FINAL" || tracker_state == "IN") {
+        std::string team_colors_attr;
+        std::string opponent_colors_attr;
+        int team_score = 0;
+        int opponent_score = 0;
+        bool has_team_score = false;
+        bool has_opponent_score = false;
+
+        auto load_score_context = [&]() {
+          if (id(current_logo_key) == "timbers") {
+            team_colors_attr = id(timbers_team_colors).state;
+            opponent_colors_attr = id(timbers_opponent_colors).state;
+            if (id(timbers_team_score).has_state() && id(timbers_team_score).state != "None") {
+              team_score = atoi(id(timbers_team_score).state.c_str());
+              has_team_score = true;
+            }
+            if (id(timbers_opponent_score).has_state() && id(timbers_opponent_score).state != "None") {
+              opponent_score = atoi(id(timbers_opponent_score).state.c_str());
+              has_opponent_score = true;
+            }
+            return true;
+          }
+          if (id(current_logo_key) == "hurricanes") {
+            team_colors_attr = id(hurricanes_team_colors).state;
+            opponent_colors_attr = id(hurricanes_opponent_colors).state;
+            if (id(hurricanes_team_score).has_state() && id(hurricanes_team_score).state != "None") {
+              team_score = atoi(id(hurricanes_team_score).state.c_str());
+              has_team_score = true;
+            }
+            if (id(hurricanes_opponent_score).has_state() && id(hurricanes_opponent_score).state != "None") {
+              opponent_score = atoi(id(hurricanes_opponent_score).state.c_str());
+              has_opponent_score = true;
+            }
+            return true;
+          }
+          if (id(current_logo_key) == "rangers") {
+            team_colors_attr = id(rangers_team_colors).state;
+            opponent_colors_attr = id(rangers_opponent_colors).state;
+            if (id(rangers_team_score).has_state() && id(rangers_team_score).state != "None") {
+              team_score = atoi(id(rangers_team_score).state.c_str());
+              has_team_score = true;
+            }
+            if (id(rangers_opponent_score).has_state() && id(rangers_opponent_score).state != "None") {
+              opponent_score = atoi(id(rangers_opponent_score).state.c_str());
+              has_opponent_score = true;
+            }
+            return true;
+          }
+          if (id(current_logo_key) == "avalanche") {
+            team_colors_attr = id(avalanche_team_colors).state;
+            opponent_colors_attr = id(avalanche_opponent_colors).state;
+            if (id(avalanche_team_score).has_state() && id(avalanche_team_score).state != "None") {
+              team_score = atoi(id(avalanche_team_score).state.c_str());
+              has_team_score = true;
+            }
+            if (id(avalanche_opponent_score).has_state() && id(avalanche_opponent_score).state != "None") {
+              opponent_score = atoi(id(avalanche_opponent_score).state.c_str());
+              has_opponent_score = true;
+            }
+            return true;
+          }
+          if (id(current_logo_key) == "canadiens") {
+            team_colors_attr = id(canadiens_team_colors).state;
+            opponent_colors_attr = id(canadiens_opponent_colors).state;
+            if (id(canadiens_team_score).has_state() && id(canadiens_team_score).state != "None") {
+              team_score = atoi(id(canadiens_team_score).state.c_str());
+              has_team_score = true;
+            }
+            if (id(canadiens_opponent_score).has_state() && id(canadiens_opponent_score).state != "None") {
+              opponent_score = atoi(id(canadiens_opponent_score).state.c_str());
+              has_opponent_score = true;
+            }
+            return true;
+          }
+          return false;
+        };
+
+        if (!load_score_context()) {
+          publish_displayed_score("");
+          return;
+        }
+
         id(score_scroll_message) = "";
         id(score_scroll_x) = 0;
 
@@ -895,8 +936,8 @@ display:
         const Color opponent_secondary_color = parse_secondary_color(opponent_colors_attr, opponent_color);
         
         // log the strings of the team and opponent colors, and their parsed RGB565 values for debugging
-        ESP_LOGD("main", "home colors: '%s' parsed to primary RGB(%d, %d, %d) secondary RGB(%d, %d, %d)", team_colors_attr.c_str(), team_color.r, team_color.g, team_color.b, team_secondary_color.r, team_secondary_color.g, team_secondary_color.b);
-        ESP_LOGD("main", "away colors: '%s' parsed to primary RGB(%d, %d, %d) secondary RGB(%d, %d, %d)", opponent_colors_attr.c_str(), opponent_color.r, opponent_color.g, opponent_color.b, opponent_secondary_color.r, opponent_secondary_color.g, opponent_secondary_color.b);
+        // ESP_LOGD("main", "home colors: '%s' parsed to primary RGB(%d, %d, %d) secondary RGB(%d, %d, %d)", team_colors_attr.c_str(), team_color.r, team_color.g, team_color.b, team_secondary_color.r, team_secondary_color.g, team_secondary_color.b);
+        // ESP_LOGD("main", "away colors: '%s' parsed to primary RGB(%d, %d, %d) secondary RGB(%d, %d, %d)", opponent_colors_attr.c_str(), opponent_color.r, opponent_color.g, opponent_color.b, opponent_secondary_color.r, opponent_secondary_color.g, opponent_secondary_color.b);
 
         char team_score_buf[8];
         char opponent_score_buf[8];
@@ -928,4 +969,7 @@ display:
         char displayed_score_buf[24];
         snprintf(displayed_score_buf, sizeof(displayed_score_buf), "%s - %s", team_score_text, opponent_score_text);
         publish_displayed_score(std::string(displayed_score_buf));
+        return;
       }
+
+      publish_displayed_score("");
