@@ -1,43 +1,34 @@
-# this is a a home assistant configuration file for a led panel display
-# it uses esp32 microcontroller and an LED SMD panel
-  # specifications of the led panel display:
-    # Size: 160mm(H)×320mm(H)
-    # Module Resolution: 64(H)×128(V)
-    # Pitch: 2.5mm
-    # Density: 160.000 pixels/m²
-    # LED Lamps: SMD2121(Customizable Nationstar lamp)
-    # Driver IC: FM6124/Chipone2037
-    # Module Refresh: 1920hz
-    # Mask: No
-    # The panel has a Hub75e connection, meaning the pins "d" and "e" are available for use and are not connected to GNG from the front
-  # Esp32 microcontroller specifications:
-    # Model: ESP32-S3-DevKitC-1-N16R8
-    # Microcontroller: ESP32-S3
-    # Flash: 16MB
-    # RAM: 512KB
-    # Connectivity: Wi-Fi 802.11 b/g/n, Bluetooth v5.0
-    # Power Supply: 5V DC
-    
-  # connection between the led panel display and the esp32 microcontroller:
-    # The led panel display is connected to the esp32 microcontroller using a 16-pin ribbon cable.
-    # The pinout of the led panel display is as follows:
-      # Pin 1: GND
-      # Pin 2: VCC
-      # Pin 3: R1
-      # Pin 4: G1
-      # Pin 5: B1
-      # Pin 6: R2
-      # Pin 7: G2
-      # Pin 8: B2
-      # Pin 9: A
-      # Pin 10: B
-      # Pin 11: C
-      # Pin 12: D
-      # Pin 13: E
-      # Pin 14: CLK
-      # Pin 15: LAT
-      # Pin 16: OE
+# Board: Generic ESP32-S3 Board (Generic)
+# Definition: definitions/boards/generic-esp32s3/manifest.yaml
 
+esphome:
+  name: game-board
+  friendly_name: game-board
+
+esp32:
+  variant: esp32s3
+  framework:
+    type: esp-idf
+
+
+
+api:
+  encryption:
+    key: "jXNRgZq5H1bayg3cQGw1E/+8sN6aXVnxI2L2fYcolSE="
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: game-board Fallback Hotspot
+    password: "JevaYhgDww8E"
+
+captive_portal:
+
+  
 substitutions:
   # Use a path inside /config so ESPHome can access files during compile.
   logo_base_path: /config/esphome/logos
@@ -56,47 +47,262 @@ substitutions:
 
   room_brightness_sensor: sensor.living_room_occupancy_illuminance
 
-esphome:
-  name: "livingroom-team-score-display"
-  friendly_name: "Living Room Team Score Display"
-  min_version: 2026.4.0
-  name_add_mac_suffix: false
-
-esp32:
-  variant: esp32s3
-
 # Enable logging
 logger:
 
-# Enable Home Assistant API
-api:
+image:
+  - file: ${logo_base_path}/timbers.png
+    id: timbers_logo_image
+    resize: 64x64
+    type: RGB565
+  - file: ${logo_base_path}/canes.png
+    id: hurricanes_logo_image
+    resize: 64x64
+    type: RGB565
+  - file: ${logo_base_path}/rangers.png
+    id: rangers_logo_image
+    resize: 64x64
+    type: RGB565
+  - file: ${logo_base_path}/avalanche.png
+    id: avalanche_logo_image
+    resize: 64x64
+    type: RGB565
+  - file: ${logo_base_path}/canadiens.png
+    id: canadiens_logo_image
+    resize: 64x64
+    type: RGB565
+  - file: ${logo_base_path}/blank.png
+    id: blank_logo_image
+    resize: 64x64
+    type: RGB565
+  # create a template image to display the current logo on the scoreboard based on the current team being displayed, from the team_logo attribute of the Home Assistant sensor
+  - platform: template
+    id: displayed_logo_image
+    lambda: |-
+      if (id(displayed_logo).state == "timbers") {
+        return &id(timbers_logo);
+      } else if (id(displayed_logo).state == "hurricanes") {
+        return &id(hurricanes_logo);
+      } else if (id(displayed_logo).state == "rangers") {
+        return &id(rangers_logo);
+      } else if (id(displayed_logo).state == "avalanche") {
+        return &id(avalanche_logo);
+      } else if (id(displayed_logo).state == "canadiens") {
+        return &id(canadiens_logo);
+      } else {
+        return &id(blank_logo_image);
+      }
 
-# Allow Over-The-Air updates
-ota:
-- platform: esphome
-
-wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
 
 display:
   - platform: hub75
     id: led_panel_display
+    shift_driver: FM6124
+    # we will have the brightness adjusted by the room brightness sensor, so set a default value.
+    # can be set between 0-255, where 0 is off and 255 is full brightness.
+    brightness : 128
     panel_width: 128
     panel_height: 64
-    update_interval: 1s
-    r1_pin: GPIO4
-    g1_pin: GPIO5
-    b1_pin: GPIO6
-    r2_pin: GPIO7
-    g2_pin: GPIO8
-    b2_pin: GPIO9
-    a_pin: GPIO10
-    b_pin: GPIO11
-    c_pin: GPIO12
-    d_pin: GPIO13
-    e_pin: GPIO14
-    clk_pin: GPIO15
-    lat_pin: GPIO16
-    oe_pin: GPIO17
-    rotation: 90
+    update_interval: 16ms
+    r1_pin: GPIO18
+    g1_pin: GPIO8
+    b1_pin: GPIO17
+    r2_pin: GPIO16
+    b2_pin: GPIO15
+    g2_pin: GPIO1
+    a_pin: GPIO7
+    b_pin: GPIO48
+    c_pin: GPIO6
+    d_pin: GPIO47
+    e_pin: GPIO2
+    clk_pin: GPIO5
+    lat_pin: GPIO21
+    oe_pin: GPIO4
+    rotation: 0
+    # create pages for each team's game board display
+    # pages:
+      
+# get the current state of each team from the Home Assistant sensor and display it on the scoreboard
+text_sensor:
+  # Timbers
+    - platform: homeassistant
+      id: timbers_state
+      entity_id: ${timbers_tracker_entity}
+    - platform: homeassistant
+      id: timbers_season
+      entity_id: ${timbers_tracker_entity}
+      attribute: season
+    - platform: homeassistant
+      id: timbers_logo
+      entity_id: ${timbers_tracker_entity}
+      attribute: ${team_logo_attribute}
+    - platform: homeassistant
+      id: timbers_opponent_logo
+      entity_id: ${timbers_tracker_entity}
+      attribute: ${opponent_logo_attribute}
+    - platform: homeassistant
+      id: timbers_team_colors
+      entity_id: ${timbers_tracker_entity}
+      attribute: ${team_colors_attribute}
+    - platform: homeassistant
+      id: timbers_opponent_colors
+      entity_id: ${timbers_tracker_entity}
+      attribute: ${opponent_colors_attribute}
+    - platform: homeassistant
+      id: timbers_next_game_datetime
+      entity_id: ${timbers_tracker_entity}
+      attribute: ${next_game_datetime_attribute}
+    - platform: homeassistant
+      id: timbers_team_score
+      entity_id: ${timbers_tracker_entity}
+      attribute: ${team_score_attribute}
+    - platform: homeassistant
+      id: timbers_opponent_score
+      entity_id: ${timbers_tracker_entity}
+      attribute: ${opponent_score_attribute}
+  # Hurricanes
+    - platform: homeassistant
+      id: hurricanes_state
+      entity_id: ${hurricanes_tracker_entity}
+    - platform: homeassistant
+      id: hurricanes_season
+      entity_id: ${hurricanes_tracker_entity}
+      attribute: season
+    - platform: homeassistant
+      id: hurricanes_logo
+      entity_id: ${hurricanes_tracker_entity}
+      attribute: ${team_logo_attribute}
+    - platform: homeassistant
+      id: hurricanes_team_colors
+      entity_id: ${hurricanes_tracker_entity}
+      attribute: ${team_colors_attribute}
+    - platform: homeassistant
+      id: hurricanes_opponent_colors
+      entity_id: ${hurricanes_tracker_entity}
+      attribute: ${opponent_colors_attribute}
+    - platform: homeassistant
+      id: hurricanes_next_game_datetime
+      entity_id: ${hurricanes_tracker_entity}
+      attribute: ${next_game_datetime_attribute}
+    - platform: homeassistant
+      id: hurricanes_team_score
+      entity_id: ${hurricanes_tracker_entity}
+      attribute: ${team_score_attribute}
+    - platform: homeassistant
+      id: hurricanes_opponent_score
+      entity_id: ${hurricanes_tracker_entity}
+      attribute: ${opponent_score_attribute}
+  # Rangers
+    - platform: homeassistant
+      id: rangers_state
+      entity_id: ${rangers_tracker_entity}
+    - platform: homeassistant
+      id: rangers_season
+      entity_id: ${rangers_tracker_entity}
+      attribute: season
+    - platform: homeassistant
+      id: rangers_logo
+      entity_id: ${rangers_tracker_entity}
+      attribute: ${team_logo_attribute}
+    - platform: homeassistant
+      id: rangers_team_colors
+      entity_id: ${rangers_tracker_entity}
+      attribute: ${team_colors_attribute}
+    - platform: homeassistant
+      id: rangers_opponent_colors
+      entity_id: ${rangers_tracker_entity}
+      attribute: ${opponent_colors_attribute}
+    - platform: homeassistant
+      id: rangers_next_game_datetime
+      entity_id: ${rangers_tracker_entity}
+      attribute: ${next_game_datetime_attribute}
+    - platform: homeassistant
+      id: rangers_team_score
+      entity_id: ${rangers_tracker_entity}
+      attribute: ${team_score_attribute}
+    - platform: homeassistant
+      id: rangers_opponent_score
+      entity_id: ${rangers_tracker_entity}
+      attribute: ${opponent_score_attribute}
+  # Avalanche
+    - platform: homeassistant
+      id: avalanche_state
+      entity_id: ${avalanche_tracker_entity}
+    - platform: homeassistant
+      id: avalanche_season
+      entity_id: ${avalanche_tracker_entity}
+      attribute: season
+    - platform: homeassistant
+      id: avalanche_logo
+      entity_id: ${avalanche_tracker_entity}
+      attribute: ${team_logo_attribute}
+    - platform: homeassistant
+      id: avalanche_team_colors
+      entity_id: ${avalanche_tracker_entity}
+      attribute: ${team_colors_attribute}
+    - platform: homeassistant
+      id: avalanche_opponent_colors
+      entity_id: ${avalanche_tracker_entity}
+      attribute: ${opponent_colors_attribute}
+    - platform: homeassistant
+      id: avalanche_next_game_datetime
+      entity_id: ${avalanche_tracker_entity}
+      attribute: ${next_game_datetime_attribute}
+    - platform: homeassistant
+      id: avalanche_team_score
+      entity_id: ${avalanche_tracker_entity}
+      attribute: ${team_score_attribute}
+    - platform: homeassistant
+      id: avalanche_opponent_score
+      entity_id: ${avalanche_tracker_entity}
+      attribute: ${opponent_score_attribute}
+  # Canadiens
+    - platform: homeassistant
+      id: canadiens_state
+      entity_id: ${canadiens_tracker_entity}
+    - platform: homeassistant
+      id: canadiens_season
+      entity_id: ${canadiens_tracker_entity}
+      attribute: season
+    - platform: homeassistant
+      id: canadiens_logo
+      entity_id: ${canadiens_tracker_entity}
+      attribute: ${team_logo_attribute}
+    - platform: homeassistant
+      id: canadiens_team_colors
+      entity_id: ${canadiens_tracker_entity}
+      attribute: ${team_colors_attribute}
+    - platform: homeassistant
+      id: canadiens_opponent_colors
+      entity_id: ${canadiens_tracker_entity}
+      attribute: ${opponent_colors_attribute}
+    - platform: homeassistant
+      id: canadiens_next_game_datetime
+      entity_id: ${canadiens_tracker_entity}
+      attribute: ${next_game_datetime_attribute}
+    - platform: homeassistant
+      id: canadiens_team_score
+      entity_id: ${canadiens_tracker_entity}
+      attribute: ${team_score_attribute}
+    - platform: homeassistant
+      id: canadiens_opponent_score
+      entity_id: ${canadiens_tracker_entity}
+      attribute: ${opponent_score_attribute}
+
+  # create template sensors to display the current logo and score on the scoreboard
+    - platform: template
+      name: "Displayed Logo"
+      id: displayed_logo
+      icon: "mdi:format-list-bulleted"
+    # display whats currently on the scoreboard
+    - platform: template
+      name: "Displayed Score"
+      id: displayed_score
+      icon: "mdi:format-list-bulleted"
+
+font:
+  - file: "gfonts://Press+Start+2P"
+    id: score_font
+    size: 8
+
+      
