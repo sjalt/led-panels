@@ -14,8 +14,7 @@ esp32:
 
 api:
   encryption:
-    key: "jXNRgZq5H1bayg3cQGw1E/+8sN6aXVnxI2L2fYcolSE="
-
+    key: !secret game_board__encryption_key
 ota:
   - platform: esphome
 
@@ -24,8 +23,7 @@ wifi:
   password: !secret wifi_password
   ap:
     ssid: game-board Fallback Hotspot
-    password: "JevaYhgDww8E"
-
+    password: !secret game_board__ap_password
 captive_portal:
 
   
@@ -34,6 +32,7 @@ substitutions:
   logo_base_path: /config/esphome/logos
   # Attribute containing the current game's team logo URL.
   team_logo_attribute: team_logo
+  opponent_logo_attribute: opponent_logo
   team_score_attribute: team_score
   opponent_score_attribute: opponent_score
   team_colors_attribute: team_colors
@@ -75,23 +74,7 @@ image:
     id: blank_logo_image
     resize: 64x64
     type: RGB565
-  # create a template image to display the current logo on the scoreboard based on the current team being displayed, from the team_logo attribute of the Home Assistant sensor
-  - platform: template
-    id: displayed_logo_image
-    lambda: |-
-      if (id(displayed_logo).state == "timbers") {
-        return &id(timbers_logo);
-      } else if (id(displayed_logo).state == "hurricanes") {
-        return &id(hurricanes_logo);
-      } else if (id(displayed_logo).state == "rangers") {
-        return &id(rangers_logo);
-      } else if (id(displayed_logo).state == "avalanche") {
-        return &id(avalanche_logo);
-      } else if (id(displayed_logo).state == "canadiens") {
-        return &id(canadiens_logo);
-      } else {
-        return &id(blank_logo_image);
-      }
+
 
 
 display:
@@ -125,168 +108,137 @@ display:
 # get the current state of each team from the Home Assistant sensor and display it on the scoreboard
 text_sensor:
   # Timbers
-    - platform: homeassistant
+    - &timbers_tracker
+      platform: homeassistant
       id: timbers_state
       entity_id: ${timbers_tracker_entity}
-    - platform: homeassistant
+    - <<: *timbers_tracker
       id: timbers_season
-      entity_id: ${timbers_tracker_entity}
       attribute: season
-    - platform: homeassistant
+    - <<: *timbers_tracker
       id: timbers_logo
-      entity_id: ${timbers_tracker_entity}
       attribute: ${team_logo_attribute}
-    - platform: homeassistant
+    - <<: *timbers_tracker
       id: timbers_opponent_logo
-      entity_id: ${timbers_tracker_entity}
       attribute: ${opponent_logo_attribute}
-    - platform: homeassistant
+    - <<: *timbers_tracker
       id: timbers_team_colors
-      entity_id: ${timbers_tracker_entity}
       attribute: ${team_colors_attribute}
-    - platform: homeassistant
+    - <<: *timbers_tracker
       id: timbers_opponent_colors
-      entity_id: ${timbers_tracker_entity}
       attribute: ${opponent_colors_attribute}
-    - platform: homeassistant
+    - <<: *timbers_tracker
       id: timbers_next_game_datetime
-      entity_id: ${timbers_tracker_entity}
       attribute: ${next_game_datetime_attribute}
-    - platform: homeassistant
+    - <<: *timbers_tracker
       id: timbers_team_score
-      entity_id: ${timbers_tracker_entity}
       attribute: ${team_score_attribute}
-    - platform: homeassistant
+    - <<: *timbers_tracker
       id: timbers_opponent_score
-      entity_id: ${timbers_tracker_entity}
       attribute: ${opponent_score_attribute}
   # Hurricanes
-    - platform: homeassistant
+    - &hurricanes_tracker
+      platform: homeassistant
       id: hurricanes_state
       entity_id: ${hurricanes_tracker_entity}
-    - platform: homeassistant
+    - <<: *hurricanes_tracker
       id: hurricanes_season
-      entity_id: ${hurricanes_tracker_entity}
       attribute: season
-    - platform: homeassistant
+    - <<: *hurricanes_tracker
       id: hurricanes_logo
-      entity_id: ${hurricanes_tracker_entity}
       attribute: ${team_logo_attribute}
-    - platform: homeassistant
+    - <<: *hurricanes_tracker
       id: hurricanes_team_colors
-      entity_id: ${hurricanes_tracker_entity}
       attribute: ${team_colors_attribute}
-    - platform: homeassistant
+    - <<: *hurricanes_tracker
       id: hurricanes_opponent_colors
-      entity_id: ${hurricanes_tracker_entity}
       attribute: ${opponent_colors_attribute}
-    - platform: homeassistant
+    - <<: *hurricanes_tracker
       id: hurricanes_next_game_datetime
-      entity_id: ${hurricanes_tracker_entity}
       attribute: ${next_game_datetime_attribute}
-    - platform: homeassistant
+    - <<: *hurricanes_tracker
       id: hurricanes_team_score
-      entity_id: ${hurricanes_tracker_entity}
       attribute: ${team_score_attribute}
-    - platform: homeassistant
+    - <<: *hurricanes_tracker
       id: hurricanes_opponent_score
-      entity_id: ${hurricanes_tracker_entity}
       attribute: ${opponent_score_attribute}
   # Rangers
-    - platform: homeassistant
+    - &rangers_tracker
+      platform: homeassistant
       id: rangers_state
       entity_id: ${rangers_tracker_entity}
-    - platform: homeassistant
+    - <<: *rangers_tracker
       id: rangers_season
-      entity_id: ${rangers_tracker_entity}
       attribute: season
-    - platform: homeassistant
+    - <<: *rangers_tracker
       id: rangers_logo
-      entity_id: ${rangers_tracker_entity}
       attribute: ${team_logo_attribute}
-    - platform: homeassistant
+    - <<: *rangers_tracker
       id: rangers_team_colors
-      entity_id: ${rangers_tracker_entity}
       attribute: ${team_colors_attribute}
-    - platform: homeassistant
+    - <<: *rangers_tracker
       id: rangers_opponent_colors
-      entity_id: ${rangers_tracker_entity}
       attribute: ${opponent_colors_attribute}
-    - platform: homeassistant
+    - <<: *rangers_tracker
       id: rangers_next_game_datetime
-      entity_id: ${rangers_tracker_entity}
       attribute: ${next_game_datetime_attribute}
-    - platform: homeassistant
+    - <<: *rangers_tracker
       id: rangers_team_score
-      entity_id: ${rangers_tracker_entity}
       attribute: ${team_score_attribute}
-    - platform: homeassistant
+    - <<: *rangers_tracker
       id: rangers_opponent_score
-      entity_id: ${rangers_tracker_entity}
       attribute: ${opponent_score_attribute}
   # Avalanche
-    - platform: homeassistant
+    - &avalanche_tracker
+      platform: homeassistant
       id: avalanche_state
       entity_id: ${avalanche_tracker_entity}
-    - platform: homeassistant
+    - <<: *avalanche_tracker
       id: avalanche_season
-      entity_id: ${avalanche_tracker_entity}
       attribute: season
-    - platform: homeassistant
+    - <<: *avalanche_tracker
       id: avalanche_logo
-      entity_id: ${avalanche_tracker_entity}
       attribute: ${team_logo_attribute}
-    - platform: homeassistant
+    - <<: *avalanche_tracker
       id: avalanche_team_colors
-      entity_id: ${avalanche_tracker_entity}
       attribute: ${team_colors_attribute}
-    - platform: homeassistant
+    - <<: *avalanche_tracker
       id: avalanche_opponent_colors
-      entity_id: ${avalanche_tracker_entity}
       attribute: ${opponent_colors_attribute}
-    - platform: homeassistant
+    - <<: *avalanche_tracker
       id: avalanche_next_game_datetime
-      entity_id: ${avalanche_tracker_entity}
       attribute: ${next_game_datetime_attribute}
-    - platform: homeassistant
+    - <<: *avalanche_tracker
       id: avalanche_team_score
-      entity_id: ${avalanche_tracker_entity}
       attribute: ${team_score_attribute}
-    - platform: homeassistant
+    - <<: *avalanche_tracker
       id: avalanche_opponent_score
-      entity_id: ${avalanche_tracker_entity}
       attribute: ${opponent_score_attribute}
   # Canadiens
-    - platform: homeassistant
+    - &canadiens_tracker
+      platform: homeassistant
       id: canadiens_state
       entity_id: ${canadiens_tracker_entity}
-    - platform: homeassistant
+    - <<: *canadiens_tracker
       id: canadiens_season
-      entity_id: ${canadiens_tracker_entity}
       attribute: season
-    - platform: homeassistant
+    - <<: *canadiens_tracker
       id: canadiens_logo
-      entity_id: ${canadiens_tracker_entity}
       attribute: ${team_logo_attribute}
-    - platform: homeassistant
+    - <<: *canadiens_tracker
       id: canadiens_team_colors
-      entity_id: ${canadiens_tracker_entity}
       attribute: ${team_colors_attribute}
-    - platform: homeassistant
+    - <<: *canadiens_tracker
       id: canadiens_opponent_colors
-      entity_id: ${canadiens_tracker_entity}
       attribute: ${opponent_colors_attribute}
-    - platform: homeassistant
+    - <<: *canadiens_tracker
       id: canadiens_next_game_datetime
-      entity_id: ${canadiens_tracker_entity}
       attribute: ${next_game_datetime_attribute}
-    - platform: homeassistant
+    - <<: *canadiens_tracker
       id: canadiens_team_score
-      entity_id: ${canadiens_tracker_entity}
       attribute: ${team_score_attribute}
-    - platform: homeassistant
+    - <<: *canadiens_tracker
       id: canadiens_opponent_score
-      entity_id: ${canadiens_tracker_entity}
       attribute: ${opponent_score_attribute}
 
   # create template sensors to display the current logo and score on the scoreboard
