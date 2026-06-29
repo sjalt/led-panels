@@ -48,6 +48,9 @@ substitutions:
 
 globals:
   # this global variable will hold the current team being displayed on the scoreboard, so we can determine if we need to update the display when the game state changes.
+  - id: displayed_team
+    type: std::string
+    restore_value: true
   - id: selected_team
     type: std::string
     restore_value: true
@@ -78,6 +81,18 @@ globals:
     restore_value: true
   - id: displayed_opponent_score
     type: std::string
+    restore_value: true
+  - id: displayed_team_primary_color
+    type: Color
+    restore_value: true
+  - id: displayed_team_secondary_color
+    type: Color
+    restore_value: true
+  - id: displayed_opponent_primary_color
+    type: Color
+    restore_value: true
+  - id: displayed_opponent_secondary_color
+    type: Color
     restore_value: true
 
 
@@ -117,7 +132,23 @@ image:
     resize: 64x64
     type: RGB565
 
+http_request:
 
+online_image:
+  - id: team_logo_image
+    url: "https://a.espncdn.com/i/teamlogos/nhl/500/scoreboard/car.png"
+    format: PNG
+    resize: 50x50
+    transparency: alpha_channel
+    type: RGB # switch to RGB565 if you want to save memory, but it will look worse
+    placeholder: hurricanes_logo_image
+  - id: opponent_logo_image
+    url: "https://a.espncdn.com/i/teamlogos/nhl/500/scoreboard/car.png"
+    format: PNG
+    resize: 50x50
+    transparency: alpha_channel
+    type: RGB # switch to RGB565 if you want to save memory, but it will look worse
+    placeholder: hurricanes_logo_image
 
 display:
   - platform: hub75
@@ -177,9 +208,27 @@ text_sensor:
     - <<: *timbers_tracker
       id: timbers_team_score
       attribute: ${team_score_attribute}
+      on_value:
+        if:
+        # if the timbers team score changes, and the selected team is the timbers, we run the update_displayed_values script to update the displayed values for the timbers.
+          condition:
+            and:
+              - lambda: 'return id(selected_team) == "Portland Timbers";'
+              - lambda: 'return id(displayed_team_score) != x;'
+          then:
+            - script.execute: update_displayed_values
     - <<: *timbers_tracker
       id: timbers_opponent_score
       attribute: ${opponent_score_attribute}
+      on_value:
+        if:
+        # if the timbers opponent score changes, and the selected team is the timbers, we run the update_displayed_values script to update the displayed values for the timbers.
+          condition:
+            and:
+              - lambda: 'return id(selected_team) == "Portland Timbers";'
+              - lambda: 'return id(displayed_opponent_score) != x;'
+          then:
+            - script.execute: update_displayed_values
   # Hurricanes
     - &hurricanes_tracker
       platform: homeassistant
@@ -206,9 +255,27 @@ text_sensor:
     - <<: *hurricanes_tracker
       id: hurricanes_team_score
       attribute: ${team_score_attribute}
+      on_value:
+        if:
+        # if the hurricanes team score changes, and the selected team is the hurricanes, we run the update_displayed_values script to update the displayed values for the hurricanes.
+          condition:
+            and:
+              - lambda: 'return id(selected_team) == "Carolina Hurricanes";'
+              - lambda: 'return id(displayed_team_score) != x;'
+          then:
+            - script.execute: update_displayed_values
     - <<: *hurricanes_tracker
       id: hurricanes_opponent_score
       attribute: ${opponent_score_attribute}
+      on_value:
+        if:
+        # if the hurricanes opponent score changes, and the selected team is the hurricanes, we run the update_displayed_values script to update the displayed values for the hurricanes.
+          condition:
+            and:
+              - lambda: 'return id(selected_team) == "Carolina Hurricanes";'
+              - lambda: 'return id(displayed_opponent_score) != x;'
+          then:
+            - script.execute: update_displayed_values
   # Rangers
     - &rangers_tracker
       platform: homeassistant
@@ -235,9 +302,27 @@ text_sensor:
     - <<: *rangers_tracker
       id: rangers_team_score
       attribute: ${team_score_attribute}
+      on_value:
+        if:
+        # if the rangers team score changes, and the selected team is the rangers, we run the update_displayed_values script to update the displayed values for the rangers.
+          condition:
+            and:
+              - lambda: 'return id(selected_team) == "New York Rangers";'
+              - lambda: 'return id(displayed_team_score) != x;'
+          then:
+            - script.execute: update_displayed_values
     - <<: *rangers_tracker
       id: rangers_opponent_score
       attribute: ${opponent_score_attribute}
+      on_value:
+        if:
+        # if the rangers opponent score changes, and the selected team is the rangers, we run the update_displayed_values script to update the displayed values for the rangers.
+          condition:
+            and:
+              - lambda: 'return id(selected_team) == "New York Rangers";'
+              - lambda: 'return id(displayed_opponent_score) != x;'
+          then:
+            - script.execute: update_displayed_values
   # Avalanche
     - &avalanche_tracker
       platform: homeassistant
@@ -264,9 +349,27 @@ text_sensor:
     - <<: *avalanche_tracker
       id: avalanche_team_score
       attribute: ${team_score_attribute}
+      on_value:
+        if:
+        # if the avalanche team score changes, and the selected team is the avalanche, we run the update_displayed_values script to update the displayed values for the avalanche.
+          condition:
+            and:
+              - lambda: 'return id(selected_team) == "Colorado Avalanche";'
+              - lambda: 'return id(displayed_team_score) != x;'
+          then:
+            - script.execute: update_displayed_values
     - <<: *avalanche_tracker
       id: avalanche_opponent_score
       attribute: ${opponent_score_attribute}
+      on_value:
+        if:
+        # if the avalanche opponent score changes, and the selected team is the avalanche, we run the update_displayed_values script to update the displayed values for the avalanche.
+          condition:
+            and:
+              - lambda: 'return id(selected_team) == "Colorado Avalanche";'
+              - lambda: 'return id(displayed_opponent_score) != x;'
+          then:
+            - script.execute: update_displayed_values
   # Canadiens
     - &canadiens_tracker
       platform: homeassistant
@@ -293,15 +396,37 @@ text_sensor:
     - <<: *canadiens_tracker
       id: canadiens_team_score
       attribute: ${team_score_attribute}
+      on_value:
+        if:
+        # if the canadiens team score changes, and the selected team is the canadiens, we run the update_displayed_values script to update the displayed values for the canadiens.
+          condition:
+            and:
+              - lambda: 'return id(selected_team) == "Montreal Canadiens";'
+              - lambda: 'return id(displayed_team_score) != x;'
+          then:
+            - script.execute: update_displayed_values
     - <<: *canadiens_tracker
       id: canadiens_opponent_score
       attribute: ${opponent_score_attribute}
+      on_value:
+        if:
+        # if the canadiens opponent score changes, and the selected team is the canadiens, we run the update_displayed_values script to update the displayed values for the canadiens.
+          condition:
+            and:
+              - lambda: 'return id(selected_team) == "Montreal Canadiens";'
+              - lambda: 'return id(displayed_opponent_score) != x;'
+          then:
+            - script.execute: update_displayed_values
 
   # create template sensors to display the current logo and score on the scoreboard
     - platform: template
       name: "Displayed Team"
-      id: displayed_team
+      id: displayed_team_sensor
       icon: "mdi:format-list-bulleted"
+      on_value:
+        then:
+          # when the displayed_team changes, we will call the update_displayed_values script to update the displayed values for the selected team
+          - script.execute: update_displayed_values
     # display whats currently on the scoreboard
     - platform: template
       name: "Displayed Score"
@@ -321,6 +446,7 @@ select:
       - "New York Rangers"
       - "Colorado Avalanche"
       - "Montreal Canadiens"
+      - "None"
     set_action:
       - lambda: |-
           id(selected_team) = x;
@@ -329,7 +455,7 @@ select:
 font:
   - file: "gfonts://Press+Start+2P"
     id: score_font
-    size: 8
+    size: 24
 
       
 script:
@@ -339,16 +465,16 @@ script:
       #this script determines which team logo (if any) should be displayed based on the selected source and the current game states, and updates the displayed_team global variable accordingly.
       # this script will only be called when the selected_team global variable is set to "Auto", so we will only check for teams that are currently in a game or have a game coming up.
       - lambda: |-
-          # use the selected_team global variable to determine which team logo to display. 
-          # we will prioritize 
-            # 1) any team currently in a postseason game ({team}_state == "IN" && {team}_season == "post-season")
-            # 2) any team currently in a game ({team}_state == "IN")
-            # 3) the next game for any team that is not currently in a game (use the {team}_next_game_datetime attribute to determine which team has the next game)
+          // use the selected_team global variable to determine which team logo to display. 
+          // we will prioritize 
+            // 1) any team currently in a postseason game ({team}_state == "IN" && {team}_season == "post-season")
+            // 2) any team currently in a game ({team}_state == "IN")
+            // 3) the next game for any team that is not currently in a game (use the {team}_next_game_datetime attribute to determine which team has the next game)
 
-          # variable to hold the team to display, if it is not set, we keep searching for a team to display.
+          // variable to hold the team to display, if it is not set, we keep searching for a team to display.
           std::string selected_team; 
 
-          # check for any team currently in a postseason game, using 
+          // check for any team currently in a postseason game, using 
           if (id(timbers_state).state == "IN" && id(timbers_season).state == "post-season") {
             selected_team = "Portland Timbers";
           } else if (id(hurricanes_state).state == "IN" && id(hurricanes_season).state == "post-season") {
@@ -361,7 +487,7 @@ script:
             selected_team = "Montreal Canadiens";
           }
 
-          # if no team is currently in a postseason game, check for any team currently in a game
+          // if no team is currently in a postseason game, check for any team currently in a game
           if (selected_team.empty()) {
             if (id(timbers_state).state == "IN") {
               selected_team = "Portland Timbers";
@@ -376,7 +502,7 @@ script:
             }
           }
 
-          # if no team is currently in a game, check for the next game for all teams and select the team with the earliest next game datetime.
+          // if no team is currently in a game, check for the next game for all teams and select the team with the earliest next game datetime.
           if (selected_team.empty()) {
             std::string next_game_team;
             std::string next_game_datetime;
@@ -413,22 +539,73 @@ script:
             selected_team = next_game_team;
           }
 
-          # if we have a team to display, update the displayed_team global variable
+          // if we have a team to display, update the displayed_team global variable
           if (!selected_team.empty()) {
-            # check if the selected_team is different from the currently displayed_team, if so, update the displayed_team global variable
+            // check if the selected_team is different from the currently displayed_team, if so, update the displayed_team global variable
             if (id(displayed_team) != selected_team) {
               id(displayed_team) = selected_team;
-              # call update_displayed_values script to update the displayed values for the selected team
-              id(update_displayed_values).execute();
+              // set the displayed_team_sensor to the new team name, so we can see what team is currently being displayed on the scoreboard in Home Assistant.
+              id(displayed_team_sensor).publish_state(selected_team);
             }
           } else {
             id(displayed_team) = "None";
           }
-# update displayed_state, displayed_season, displayed_logo, displayed_opponent_logo, displayed_team_colors, displayed_opponent_colors, displayed_next_game_datetime, displayed_team_score, displayed_opponent_score when displayed_team changes, so we can use these values to update the display.
+  # update displayed_state, displayed_season, displayed_logo, displayed_opponent_logo, displayed_team_colors, displayed_opponent_colors, displayed_next_game_datetime, displayed_team_score, displayed_opponent_score when displayed_team changes, so we can use these values to update the display.
   - id: update_displayed_values
     mode: restart
     then:
       - lambda: |-
+          auto hex_nibble = [](char c) {
+            if (c >= '0' && c <= '9') {
+              return c - '0';
+            }
+            if (c >= 'a' && c <= 'f') {
+              return 10 + (c - 'a');
+            }
+            return 10 + (c - 'A');
+          };
+
+          auto is_hex_char = [](char c) {
+            return ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
+          };
+          
+          auto parse_hex_color_at = [&](const std::string &raw, size_t start_index, Color fallback) {
+            for (size_t i = start_index; i + 6 < raw.size(); i++) {
+              if (raw[i] != '#') {
+                continue;
+              }
+              bool valid = true;
+              for (size_t j = i + 1; j < i + 7; j++) {
+                if (!is_hex_char(raw[j])) {
+                  valid = false;
+                  break;
+                }
+              }
+              if (!valid) {
+                continue;
+              }
+
+              const int r = (hex_nibble(raw[i + 1]) * 16) + hex_nibble(raw[i + 2]);
+              const int g = (hex_nibble(raw[i + 3]) * 16) + hex_nibble(raw[i + 4]);
+              const int b = (hex_nibble(raw[i + 5]) * 16) + hex_nibble(raw[i + 6]);
+              return Color(r, g, b);
+            }
+            return fallback;
+          };
+
+          // Parse primary/secondary team colors from strings like "#e30426, #000000".
+          auto parse_primary_color = [&](const std::string &raw, Color fallback) {
+            return parse_hex_color_at(raw, 0, fallback);
+          };
+
+          auto parse_secondary_color = [&](const std::string &raw, Color fallback) {
+            size_t comma_pos = raw.find(',');
+            if (comma_pos == std::string::npos) {
+              return fallback;
+            }
+            return parse_hex_color_at(raw, comma_pos + 1, fallback);
+          };
+
           if (id(displayed_team) == "Portland Timbers") {
             id(displayed_state) = id(timbers_state).state;
             id(displayed_season) = id(timbers_season).state;
@@ -439,6 +616,10 @@ script:
             id(displayed_next_game_datetime) = id(timbers_next_game_datetime).state;
             id(displayed_team_score) = id(timbers_team_score).state;
             id(displayed_opponent_score) = id(timbers_opponent_score).state;
+            id(displayed_team_primary_color) = parse_primary_color(id(timbers_team_colors).state, Color::WHITE);
+            id(displayed_team_secondary_color) = parse_secondary_color(id(timbers_team_colors).state, Color::BLACK);
+            id(displayed_opponent_primary_color) = parse_primary_color(id(timbers_opponent_colors).state, Color::WHITE);
+            id(displayed_opponent_secondary_color) = parse_secondary_color(id(timbers_opponent_colors).state, Color::BLACK);
           } else if (id(displayed_team) == "Carolina Hurricanes") {
             id(displayed_state) = id(hurricanes_state).state;
             id(displayed_season) = id(hurricanes_season).state;
@@ -449,6 +630,10 @@ script:
             id(displayed_next_game_datetime) = id(hurricanes_next_game_datetime).state;
             id(displayed_team_score) = id(hurricanes_team_score).state;
             id(displayed_opponent_score) = id(hurricanes_opponent_score).state;
+            id(displayed_team_primary_color) = parse_primary_color(id(hurricanes_team_colors).state, Color::WHITE);
+            id(displayed_team_secondary_color) = parse_secondary_color(id(hurricanes_team_colors).state, Color::BLACK);
+            id(displayed_opponent_primary_color) = parse_primary_color(id(hurricanes_opponent_colors).state, Color::WHITE);
+            id(displayed_opponent_secondary_color) = parse_secondary_color(id(hurricanes_opponent_colors).state, Color::BLACK);
           } else if (id(displayed_team) == "New York Rangers") {
             id(displayed_state) = id(rangers_state).state;
             id(displayed_season) = id(rangers_season).state;
@@ -459,6 +644,10 @@ script:
             id(displayed_next_game_datetime) = id(rangers_next_game_datetime).state;
             id(displayed_team_score) = id(rangers_team_score).state;
             id(displayed_opponent_score) = id(rangers_opponent_score).state;
+            id(displayed_team_primary_color) = parse_primary_color(id(rangers_team_colors).state, Color::WHITE);
+            id(displayed_team_secondary_color) = parse_secondary_color(id(rangers_team_colors).state, Color::BLACK);
+            id(displayed_opponent_primary_color) = parse_primary_color(id(rangers_opponent_colors).state, Color::WHITE);
+            id(displayed_opponent_secondary_color) = parse_secondary_color(id(rangers_opponent_colors).state, Color::BLACK);
           } else if (id(displayed_team) == "Colorado Avalanche") {
             id(displayed_state) = id(avalanche_state).state;
             id(displayed_season) = id(avalanche_season).state;
@@ -469,6 +658,10 @@ script:
             id(displayed_next_game_datetime) = id(avalanche_next_game_datetime).state;
             id(displayed_team_score) = id(avalanche_team_score).state;
             id(displayed_opponent_score) = id(avalanche_opponent_score).state;
+            id(displayed_team_primary_color) = parse_primary_color(id(avalanche_team_colors).state, Color::WHITE);
+            id(displayed_team_secondary_color) = parse_secondary_color(id(avalanche_team_colors).state, Color::BLACK);
+            id(displayed_opponent_primary_color) = parse_primary_color(id(avalanche_opponent_colors).state, Color::WHITE);
+            id(displayed_opponent_secondary_color) = parse_secondary_color(id(avalanche_opponent_colors).state, Color::BLACK);
           } else if (id(displayed_team) == "Montreal Canadiens") {
             id(displayed_state) = id(canadiens_state).state;
             id(displayed_season) = id(canadiens_season).state;
@@ -479,6 +672,10 @@ script:
             id(displayed_next_game_datetime) = id(canadiens_next_game_datetime).state;
             id(displayed_team_score) = id(canadiens_team_score).state;
             id(displayed_opponent_score) = id(canadiens_opponent_score).state;
+            id(displayed_team_primary_color) = parse_primary_color(id(canadiens_team_colors).state, Color::WHITE);
+            id(displayed_team_secondary_color) = parse_secondary_color(id(canadiens_team_colors).state, Color::BLACK);
+            id(displayed_opponent_primary_color) = parse_primary_color(id(canadiens_opponent_colors).state, Color::WHITE);
+            id(displayed_opponent_secondary_color) = parse_secondary_color(id(canadiens_opponent_colors).state, Color::BLACK);
           } else {
             // if no team is selected, clear the displayed values
             id(displayed_state) = "";
@@ -492,4 +689,153 @@ script:
             id(displayed_opponent_score) = "";
           }
 
+          // check to see if the team logos have changed, if so, we will update the online_image components to load the new logos from the URLs.
+          if (id(displayed_logo) != id(team_logo_image).url || id(displayed_opponent_logo) != id(opponent_logo_image).url) {
+            id(update_online_images).execute();
+          }
+  - id: update_online_images
+    mode: restart
+    then:
+      - online_image.set_url:
+          id: team_logo_image
+          url: !lambda 'return id(displayed_logo);'
+      - component.update: team_logo_image
+      - online_image.set_url:
+          id: opponent_logo_image
+          url: !lambda 'return id(displayed_opponent_logo);'
+      - component.update: opponent_logo_image
+  # this script updates the display. it checks the displayed_* global variables to determine what to display on the scoreboard. 
+  # if it has an ongoing game, it will display the team logo, team score, opponent logo, opponent score
+  # if it does not have an ongoing game, it will display the team logo, and the next game date/time, and the opponent logo. if there is no next game, it will display "No Game" instead of the date/time.
+  # if the selected_team is "None", it will display a blank screen.
+  - id: update_display
+    mode: restart
+    then:
+      - lambda: |-
+          // check if the selected_team is "None", if so, display a blank screen.
+          if (id(displayed_team) == "None") {
+            id(led_panel_display).fill(Color::BLACK);
+            id(led_panel_display).update();
+            return;
+          }
 
+          auto format_utc_to_pdt = [&](const std::string &raw) {
+            // Expected input: YYYY-MM-DDTHH:MMZ
+            if (raw.size() < 16) {
+              return raw;
+            }
+            if (raw[4] != '-' || raw[7] != '-' || raw[10] != 'T' || raw[13] != ':') {
+              return raw;
+            }
+
+            const int digit_positions[] = {0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15};
+            for (int idx : digit_positions) {
+              if (!is_digit(raw[idx])) {
+                return raw;
+              }
+            }
+
+            int year = atoi(raw.substr(0, 4).c_str());
+            int month = atoi(raw.substr(5, 2).c_str());
+            int day = atoi(raw.substr(8, 2).c_str());
+            int hour = atoi(raw.substr(11, 2).c_str());
+            const int minute = atoi(raw.substr(14, 2).c_str());
+
+            if (month < 1 || month > 12 || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+              return raw;
+            }
+            if (day < 1 || day > days_in_month(year, month)) {
+              return raw;
+            }
+
+            // User requested PDT display, so apply a fixed UTC-7 offset.
+            hour -= 7;
+            while (hour < 0) {
+              hour += 24;
+              day -= 1;
+              if (day < 1) {
+                month -= 1;
+                if (month < 1) {
+                  month = 12;
+                  year -= 1;
+                }
+                day = days_in_month(year, month);
+              }
+            }
+
+            const bool is_pm = hour >= 12;
+            int hour_12 = hour % 12;
+            if (hour_12 == 0) {
+              hour_12 = 12;
+            }
+
+            // check to see if it's today, and if so display "TODAY" instead of the date
+            // get current time in UTC, then apply the same UTC-7 offset to compare against the game time
+            auto today_year = id(my_time).now().year;
+            auto today_month = id(my_time).now().month;
+            auto today_day = id(my_time).now().day_of_month;
+
+            // ESP_LOGD("main", "Current time: %04d-%02d-%02d", today_year, today_month, today_day);
+            // ESP_LOGD("main", "Game time: %04d-%02d-%02d", year, month, day);
+            
+            
+            if (year == today_year && month == today_month && day == today_day) {
+              // ESP_LOGD("main", "Game is today");
+              const std::string am_pm = is_pm ? "PM" : "AM";
+              char formatted_today[32];
+              snprintf(formatted_today, sizeof(formatted_today), "TODAY %s:%s%s", two_digit(hour_12).c_str(), two_digit(minute).c_str(), am_pm.c_str());
+              return std::string(formatted_today);
+            }
+            const std::string am_pm = is_pm ? "PM" : "AM";
+            const int year_short = year % 100;
+            char formatted_date[40];
+            snprintf(formatted_date, sizeof(formatted_date), "%d/%d/%s %s:%s%s", month, day, two_digit(year_short).c_str(), two_digit(hour_12).c_str(), two_digit(minute).c_str(), am_pm.c_str());
+            return std::string(formatted_date);
+          };
+
+          if (id(displayed_state) == "IN" || id(displayed_state) == "FINAL" || id(displayed_state) == "POST") {
+            // check if the displayed_state is "IN", if so, display the team logo, opponent logo, and underneath:  team score,  opponent score
+            // display the team logo on the left side of the scoreboard via the team_logo_image global variable, which is a URL to the team's logo image. we will use the image component to load the image from the URL and display it on the scoreboard.
+            // the team logo will be displayed at x=0, y=0, and will be 50x50 pixels. the opponent logo will be displayed at x=128-50, y=0, and will be 50x50 pixels.
+            id(led_panel_display).draw_image(0, 0, id(team_logo_image));            
+            id(led_panel_display).draw_image(id(led_panel_display).get_width() - 50, 0, id(opponent_logo_image));
+
+            // team score display:
+            id(led_panel_display).start_clipping(0, 50, id(led_panel_display).get_width() / 2, id(led_panel_display).get_height());
+            id(led_panel_display).fill(id(displayed_team_secondary_color));
+            id(led_panel_display).set_text_color(id(displayed_team_primary_color));
+            id(led_panel_display).set_background_color(id(displayed_team_secondary_color));
+            id(led_panel_display).print(id(led_panel_display).get_width() / 4, 51, id(score_font), TextAlign::TOP_CENTER, id(displayed_team_score));
+            id(led_panel_display).end_clipping();
+            
+            // opponent score display:
+            id(led_panel_display).start_clipping(id(led_panel_display).get_width() / 2, 50, id(led_panel_display).get_width(), id(led_panel_display).get_height());
+            id(led_panel_display).fill(id(displayed_opponent_secondary_color));
+            id(led_panel_display).set_text_color(id(displayed_opponent_primary_color));
+            id(led_panel_display).set_background_color(id(displayed_opponent_secondary_color));
+            id(led_panel_display).print(3 * id(led_panel_display).get_width() / 4, 51, id(score_font), TextAlign::TOP_CENTER, id(displayed_opponent_score));
+            id(led_panel_display).end_clipping();
+
+            
+            id(led_panel_display).update();
+            return;
+
+          } else {
+            // if the displayed_state is not "IN", display the team logo, opponent logo, and underneath:  next game date/time, or "No Game" if there is no next game.
+            id(led_panel_display).draw_image(0, 0, id(team_logo_image));
+            id(led_panel_display).draw_image(id(led_panel_display).get_width() - 50, 0, id(opponent_logo_image));
+            id(led_panel_display).start_clipping(0, 50, id(led_panel_display).get_width() / 2, id(led_panel_display).get_height());
+            id(led_panel_display).fill(id(displayed_team_secondary_color));
+            id(led_panel_display).set_text_color(id(displayed_team_primary_color));
+            id(led_panel_display).set_background_color(id(displayed_team_secondary_color));
+            if (id(displayed_next_game_datetime).empty()) {
+              // id(led_panel_display).print(id(led_panel_display).get_width() / 2, 51, id(score_font), TextAlign::CENTER_CENTER, "No Game");
+            } else {
+              // id(led_panel_display).print(id(led_panel_display).get_width() / 2, 51, id(score_font), TextAlign::TOP_CENTER, format_utc_to_pdt(id(displayed_next_game_datetime)));
+            }
+            id(led_panel_display).end_clipping();
+            id(led_panel_display).update();
+            return;
+          }
+          
+            
