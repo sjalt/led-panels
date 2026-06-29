@@ -46,8 +46,50 @@ substitutions:
 
   room_brightness_sensor: sensor.living_room_occupancy_illuminance
 
+globals:
+  # this global variable will hold the current team being displayed on the scoreboard, so we can determine if we need to update the display when the game state changes.
+  - id: selected_team
+    type: std::string
+    restore_value: true
+    initial_value: "Auto"
+  - id: displayed_state
+    type: std::string
+    restore_value: true
+  - id: displayed_season
+    type: std::string
+    restore_value: true
+  - id: displayed_logo
+    type: std::string
+    restore_value: true
+  - id: displayed_opponent_logo
+    type: std::string
+    restore_value: true
+  - id: displayed_team_colors
+    type: std::string
+    restore_value: true
+  - id: displayed_opponent_colors
+    type: std::string
+    restore_value: true
+  - id: displayed_next_game_datetime
+    type: std::string
+    restore_value: true
+  - id: displayed_team_score
+    type: std::string
+    restore_value: true
+  - id: displayed_opponent_score
+    type: std::string
+    restore_value: true
+
+
+
 # Enable logging
 logger:
+
+# get the current time from Home Assistant to display the next game time on the scoreboard
+time:
+  - platform: homeassistant
+    id: my_time
+    timezone: "America/Los_Angeles"
 
 image:
   - file: ${logo_base_path}/timbers.png
@@ -86,7 +128,9 @@ display:
     brightness : 128
     panel_width: 128
     panel_height: 64
-    update_interval: 16ms
+    # update_interval: 16ms
+    # we will update the display using scripts (display.update: led_panel_display) so set the update interval to never.
+    update_interval: never
     r1_pin: GPIO18
     g1_pin: GPIO8
     b1_pin: GPIO17
@@ -148,6 +192,9 @@ text_sensor:
       id: hurricanes_logo
       attribute: ${team_logo_attribute}
     - <<: *hurricanes_tracker
+      id: hurricanes_opponent_logo
+      attribute: ${opponent_logo_attribute}
+    - <<: *hurricanes_tracker
       id: hurricanes_team_colors
       attribute: ${team_colors_attribute}
     - <<: *hurricanes_tracker
@@ -173,6 +220,9 @@ text_sensor:
     - <<: *rangers_tracker
       id: rangers_logo
       attribute: ${team_logo_attribute}
+    - <<: *rangers_tracker
+      id: rangers_opponent_logo
+      attribute: ${opponent_logo_attribute}
     - <<: *rangers_tracker
       id: rangers_team_colors
       attribute: ${team_colors_attribute}
@@ -200,6 +250,9 @@ text_sensor:
       id: avalanche_logo
       attribute: ${team_logo_attribute}
     - <<: *avalanche_tracker
+      id: avalanche_opponent_logo
+      attribute: ${opponent_logo_attribute}
+    - <<: *avalanche_tracker
       id: avalanche_team_colors
       attribute: ${team_colors_attribute}
     - <<: *avalanche_tracker
@@ -226,6 +279,9 @@ text_sensor:
       id: canadiens_logo
       attribute: ${team_logo_attribute}
     - <<: *canadiens_tracker
+      id: canadiens_opponent_logo
+      attribute: ${opponent_logo_attribute}
+    - <<: *canadiens_tracker
       id: canadiens_team_colors
       attribute: ${team_colors_attribute}
     - <<: *canadiens_tracker
@@ -243,8 +299,8 @@ text_sensor:
 
   # create template sensors to display the current logo and score on the scoreboard
     - platform: template
-      name: "Displayed Logo"
-      id: displayed_logo
+      name: "Displayed Team"
+      id: displayed_team
       icon: "mdi:format-list-bulleted"
     # display whats currently on the scoreboard
     - platform: template
@@ -252,9 +308,188 @@ text_sensor:
       id: displayed_score
       icon: "mdi:format-list-bulleted"
 
+select:
+  - platform: template
+    id: logo_source
+    name: Logo Source
+    optimistic: true
+    initial_option: "Auto"
+    options:
+      - "Auto"
+      - "Portland Timbers"
+      - "Carolina Hurricanes"
+      - "New York Rangers"
+      - "Colorado Avalanche"
+      - "Montreal Canadiens"
+    set_action:
+      - lambda: |-
+          id(selected_team) = x;
+
+      
 font:
   - file: "gfonts://Press+Start+2P"
     id: score_font
     size: 8
 
       
+script:
+  - id: auto_team_select
+    mode: restart
+    then:
+      #this script determines which team logo (if any) should be displayed based on the selected source and the current game states, and updates the displayed_team global variable accordingly.
+      # this script will only be called when the selected_team global variable is set to "Auto", so we will only check for teams that are currently in a game or have a game coming up.
+      - lambda: |-
+          # use the selected_team global variable to determine which team logo to display. 
+          # we will prioritize 
+            # 1) any team currently in a postseason game ({team}_state == "IN" && {team}_season == "post-season")
+            # 2) any team currently in a game ({team}_state == "IN")
+            # 3) the next game for any team that is not currently in a game (use the {team}_next_game_datetime attribute to determine which team has the next game)
+
+          # variable to hold the team to display, if it is not set, we keep searching for a team to display.
+          std::string selected_team; 
+
+          # check for any team currently in a postseason game, using 
+          if (id(timbers_state).state == "IN" && id(timbers_season).state == "post-season") {
+            selected_team = "Portland Timbers";
+          } else if (id(hurricanes_state).state == "IN" && id(hurricanes_season).state == "post-season") {
+            selected_team = "Carolina Hurricanes";
+          } else if (id(rangers_state).state == "IN" && id(rangers_season).state == "post-season") {
+            selected_team = "New York Rangers";
+          } else if (id(avalanche_state).state == "IN" && id(avalanche_season).state == "post-season") {
+            selected_team = "Colorado Avalanche";
+          } else if (id(canadiens_state).state == "IN" && id(canadiens_season).state == "post-season") {
+            selected_team = "Montreal Canadiens";
+          }
+
+          # if no team is currently in a postseason game, check for any team currently in a game
+          if (selected_team.empty()) {
+            if (id(timbers_state).state == "IN") {
+              selected_team = "Portland Timbers";
+            } else if (id(hurricanes_state).state == "IN") {
+              selected_team = "Carolina Hurricanes";
+            } else if (id(rangers_state).state == "IN") {
+              selected_team = "New York Rangers";
+            } else if (id(avalanche_state).state == "IN") {
+              selected_team = "Colorado Avalanche";
+            } else if (id(canadiens_state).state == "IN") {
+              selected_team = "Montreal Canadiens";
+            }
+          }
+
+          # if no team is currently in a game, check for the next game for all teams and select the team with the earliest next game datetime.
+          if (selected_team.empty()) {
+            std::string next_game_team;
+            std::string next_game_datetime;
+
+            if (!id(timbers_next_game_datetime).state.empty()) {
+              next_game_team = "Portland Timbers";
+              next_game_datetime = id(timbers_next_game_datetime).state;
+            }
+            if (!id(hurricanes_next_game_datetime).state.empty()) {
+              if (next_game_datetime.empty() || id(hurricanes_next_game_datetime).state < next_game_datetime) {
+                next_game_team = "Carolina Hurricanes";
+                next_game_datetime = id(hurricanes_next_game_datetime).state;
+              }
+            }
+            if (!id(rangers_next_game_datetime).state.empty()) {
+              if (next_game_datetime.empty() || id(rangers_next_game_datetime).state < next_game_datetime) {
+                next_game_team = "New York Rangers";
+                next_game_datetime = id(rangers_next_game_datetime).state;
+              }
+            }
+            if (!id(avalanche_next_game_datetime).state.empty()) {
+              if (next_game_datetime.empty() || id(avalanche_next_game_datetime).state < next_game_datetime) {
+                next_game_team = "Colorado Avalanche";
+                next_game_datetime = id(avalanche_next_game_datetime).state;
+              }
+            }
+            if (!id(canadiens_next_game_datetime).state.empty()) {
+              if (next_game_datetime.empty() || id(canadiens_next_game_datetime).state < next_game_datetime) {
+                next_game_team = "Montreal Canadiens";
+                next_game_datetime = id(canadiens_next_game_datetime).state;
+              }
+            }
+
+            selected_team = next_game_team;
+          }
+
+          # if we have a team to display, update the displayed_team global variable
+          if (!selected_team.empty()) {
+            # check if the selected_team is different from the currently displayed_team, if so, update the displayed_team global variable
+            if (id(displayed_team) != selected_team) {
+              id(displayed_team) = selected_team;
+              # call update_displayed_values script to update the displayed values for the selected team
+              id(update_displayed_values).execute();
+            }
+          } else {
+            id(displayed_team) = "None";
+          }
+# update displayed_state, displayed_season, displayed_logo, displayed_opponent_logo, displayed_team_colors, displayed_opponent_colors, displayed_next_game_datetime, displayed_team_score, displayed_opponent_score when displayed_team changes, so we can use these values to update the display.
+  - id: update_displayed_values
+    mode: restart
+    then:
+      - lambda: |-
+          if (id(displayed_team) == "Portland Timbers") {
+            id(displayed_state) = id(timbers_state).state;
+            id(displayed_season) = id(timbers_season).state;
+            id(displayed_logo) = id(timbers_logo).state;
+            id(displayed_opponent_logo) = id(timbers_opponent_logo).state;
+            id(displayed_team_colors) = id(timbers_team_colors).state;
+            id(displayed_opponent_colors) = id(timbers_opponent_colors).state;
+            id(displayed_next_game_datetime) = id(timbers_next_game_datetime).state;
+            id(displayed_team_score) = id(timbers_team_score).state;
+            id(displayed_opponent_score) = id(timbers_opponent_score).state;
+          } else if (id(displayed_team) == "Carolina Hurricanes") {
+            id(displayed_state) = id(hurricanes_state).state;
+            id(displayed_season) = id(hurricanes_season).state;
+            id(displayed_logo) = id(hurricanes_logo).state;
+            id(displayed_opponent_logo) = id(hurricanes_opponent_logo).state;
+            id(displayed_team_colors) = id(hurricanes_team_colors).state;
+            id(displayed_opponent_colors) = id(hurricanes_opponent_colors).state;
+            id(displayed_next_game_datetime) = id(hurricanes_next_game_datetime).state;
+            id(displayed_team_score) = id(hurricanes_team_score).state;
+            id(displayed_opponent_score) = id(hurricanes_opponent_score).state;
+          } else if (id(displayed_team) == "New York Rangers") {
+            id(displayed_state) = id(rangers_state).state;
+            id(displayed_season) = id(rangers_season).state;
+            id(displayed_logo) = id(rangers_logo).state;
+            id(displayed_opponent_logo) = id(rangers_opponent_logo).state;
+            id(displayed_team_colors) = id(rangers_team_colors).state;
+            id(displayed_opponent_colors) = id(rangers_opponent_colors).state;
+            id(displayed_next_game_datetime) = id(rangers_next_game_datetime).state;
+            id(displayed_team_score) = id(rangers_team_score).state;
+            id(displayed_opponent_score) = id(rangers_opponent_score).state;
+          } else if (id(displayed_team) == "Colorado Avalanche") {
+            id(displayed_state) = id(avalanche_state).state;
+            id(displayed_season) = id(avalanche_season).state;
+            id(displayed_logo) = id(avalanche_logo).state;
+            id(displayed_opponent_logo) = id(avalanche_opponent_logo).state;
+            id(displayed_team_colors) = id(avalanche_team_colors).state;
+            id(displayed_opponent_colors) = id(avalanche_opponent_colors).state;
+            id(displayed_next_game_datetime) = id(avalanche_next_game_datetime).state;
+            id(displayed_team_score) = id(avalanche_team_score).state;
+            id(displayed_opponent_score) = id(avalanche_opponent_score).state;
+          } else if (id(displayed_team) == "Montreal Canadiens") {
+            id(displayed_state) = id(canadiens_state).state;
+            id(displayed_season) = id(canadiens_season).state;
+            id(displayed_logo) = id(canadiens_logo).state;
+            id(displayed_opponent_logo) = id(canadiens_opponent_logo).state;
+            id(displayed_team_colors) = id(canadiens_team_colors).state;
+            id(displayed_opponent_colors) = id(canadiens_opponent_colors).state;
+            id(displayed_next_game_datetime) = id(canadiens_next_game_datetime).state;
+            id(displayed_team_score) = id(canadiens_team_score).state;
+            id(displayed_opponent_score) = id(canadiens_opponent_score).state;
+          } else {
+            // if no team is selected, clear the displayed values
+            id(displayed_state) = "";
+            id(displayed_season) = "";
+            id(displayed_logo) = "";
+            id(displayed_opponent_logo) = "";
+            id(displayed_team_colors) = "";
+            id(displayed_opponent_colors) = "";
+            id(displayed_next_game_datetime) = "";
+            id(displayed_team_score) = "";
+            id(displayed_opponent_score) = "";
+          }
+
+
