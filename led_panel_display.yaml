@@ -145,7 +145,8 @@ globals:
     restore_value: true
   - id: opponent_logo_downloaded
     type: bool
-    restore_value: true
+    restore_value: false
+    initial_value: 'false'
 
 
 
@@ -192,7 +193,7 @@ http_request:
 
 online_image:
   - id: team_logo_image
-    url: "https://a.espncdn.com/i/teamlogos/nhl/500/scoreboard/car.png"
+    url: "https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png"
     format: PNG
     resize: 50x50
     transparency: alpha_channel
@@ -201,14 +202,16 @@ online_image:
       then:
       # first set the team_logo_downloaded global variable to true, so we know the image is downloaded and we can update the display.
         - lambda: |-
+            
             id(team_logo_downloaded) = true;
             // check to see if opponent_logo_image is downloaded, if so, update the display
             if (id(opponent_logo_downloaded)) {
+              ESP_LOGD("update_displayed_values", "Both logos downloaded, updating display with new values. (from team_logo_image on_download_finished)");
               id(update_displayed_values).execute();
             }
       
   - id: opponent_logo_image
-    url: "https://a.espncdn.com/i/teamlogos/nhl/500/scoreboard/car.png"
+    url: "https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png"
     format: PNG
     resize: 50x50
     transparency: alpha_channel
@@ -220,6 +223,7 @@ online_image:
             id(opponent_logo_downloaded) = true;
             // check to see if team_logo_image is downloaded, if so, update the display
             if (id(team_logo_downloaded)) {
+              ESP_LOGD("update_displayed_values", "Both logos downloaded, updating display with new values. (from opponent_logo_image on_download_finished)");
               id(update_displayed_values).execute();
             }
 
@@ -522,6 +526,11 @@ text_sensor:
       name: "Displayed Score"
       id: displayed_score
       icon: "mdi:format-list-bulleted"
+    
+    - platform: template
+      name: "Displayed Team info"
+      id: sensor_team_info
+      icon: "mdi:format-list-bulleted"
 
 select:
   - platform: template
@@ -554,6 +563,7 @@ button:
       then:
         - script.execute: auto_team_select
         - script.execute: update_displayed_values
+        - script.execute: update_online_images
 
 number:
   - platform: template
@@ -572,6 +582,7 @@ number:
 
     icon: "mdi:lightbulb"
     optimistic: true
+    initial_value: 128
 font:
   - file: "gfonts://Press+Start+2P"
     id: score_font
@@ -840,6 +851,20 @@ script:
           id(displayed_team_sensor).publish_state(id(displayed_team));
           id(displayed_score).publish_state(id(displayed_team_score) + " - " + id(displayed_opponent_score));
 
+          // update the text sensor with the displayed team info, so we can see what is currently being displayed on the scoreboard in Home Assistant.
+          id(sensor_team_info).publish_state(
+            "Team: " + id(displayed_team) + 
+            ", State: " + id(displayed_state) + 
+            ", Season: " + id(displayed_season) + 
+            ", Logo: " + id(displayed_logo) +
+            ", Opponent Logo: " + id(displayed_opponent_logo) +
+            ", Team Colors: " + id(displayed_team_colors) +
+            ", Opponent Colors: " + id(displayed_opponent_colors) +
+            ", Team Score: " + id(displayed_team_score) + 
+            ", Opponent Score: " + id(displayed_opponent_score) + 
+            ", Next Game: " + id(displayed_next_game_datetime)
+          );
+
           // if the logos did not change, we dont need to update the logos so we call the update_display script to update the display with the new values, but we dont need to download the logos again.  
           if(id(displayed_logo) != id(current_team_logo_url) || id(displayed_opponent_logo) != id(current_opponent_logo_url)) {
             // check to see if the team logos have changed, if so, we will update the online_image components to load the new logos from the URLs.
@@ -856,6 +881,7 @@ script:
             or:
               - lambda: 'return id(displayed_logo) != id(current_team_logo_url);'
               - lambda: 'return id(displayed_opponent_logo) != id(current_opponent_logo_url);'
+              - lambda: 'return true;'
           then:
             # set team_logo_downloaded and opponent_logo_downloaded to false, so we know the images are not downloaded yet.
             - lambda: |-

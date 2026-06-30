@@ -1,0 +1,40 @@
+esphome:
+  name: "kegerator"
+  friendly_name: Kegerator
+
+esp32:
+  variant: ESP32C3
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret kegerator__encryption_key
+
+# Allow Over-The-Air updates
+ota:
+- platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+sensor:
+  - platform: hx711
+    name: seltzer
+    clk_pin: GPIO4
+    dout_pin: GPIO3
+    id: sensor_hx711_1
+    update_interval: 1s
+    unit_of_measurement: kg
+    device_class: weight
+    state_class: measurement
+    on_value:
+      - then: 
+          - lambda: |-
+              ESP_LOGD("hx711", "Weight: %.2f kg", x);
+              
