@@ -4,6 +4,10 @@
 esphome:
   name: game-board
   friendly_name: game-board
+  on_boot:
+    - priority: -100.0
+      then:
+        - script.execute: auto_team_select
 
 esp32:
   variant: esp32s3
@@ -26,7 +30,10 @@ wifi:
     password: !secret game_board__ap_password
 captive_portal:
 
-  
+psram:
+  speed: 80MHz
+  mode: octal
+
 # Enable logging
 logger:
   
@@ -57,9 +64,8 @@ display:
   lat_pin: GPIO21
   oe_pin: GPIO4
   rotation: 0
-  # show_test_card: true
-  # create pages for each team's game board display
-  # pages:
+
+
 
 substitutions:
   # Use a path inside /config so ESPHome can access files during compile.
@@ -134,6 +140,12 @@ globals:
   - id: current_opponent_logo_url
     type: std::string
     restore_value: true
+  - id: team_logo_downloaded
+    type: bool
+    restore_value: true
+  - id: opponent_logo_downloaded
+    type: bool
+    restore_value: true
 
 
 
@@ -145,32 +157,38 @@ time:
     timezone: "America/Los_Angeles"
 
 image:
-  - file: ${logo_base_path}/timbers.png
-    id: timbers_logo_image
-    resize: 64x64
-    type: RGB565
-  - file: ${logo_base_path}/canes.png
-    id: hurricanes_logo_image
-    resize: 64x64
-    type: RGB565
-  - file: ${logo_base_path}/rangers.png
-    id: rangers_logo_image
-    resize: 64x64
-    type: RGB565
-  - file: ${logo_base_path}/avalanche.png
-    id: avalanche_logo_image
-    resize: 64x64
-    type: RGB565
-  - file: ${logo_base_path}/canadiens.png
-    id: canadiens_logo_image
-    resize: 64x64
-    type: RGB565
+  # - file: ${logo_base_path}/timbers.png
+  #   id: timbers_logo_image
+  #   resize: 64x64
+  #   type: RGB565
+  # - file: ${logo_base_path}/canes.png
+  #   id: hurricanes_logo_image
+  #   resize: 64x64
+  #   type: RGB565
+  # - file: ${logo_base_path}/rangers.png
+  #   id: rangers_logo_image
+  #   resize: 64x64
+  #   type: RGB565
+  # - file: ${logo_base_path}/avalanche.png
+  #   id: avalanche_logo_image
+  #   resize: 64x64
+  #   type: RGB565
+  # - file: ${logo_base_path}/canadiens.png
+  #   id: canadiens_logo_image
+  #   resize: 64x64
+  #   type: RGB565
   - file: ${logo_base_path}/blank.png
     id: blank_logo_image
     resize: 64x64
     type: RGB565
+  - file: ${logo_base_path}/vs.png
+    id: vs_logo_image
+    resize: 32x32
+    type: RGB    
+    transparency: alpha_channel
 
 http_request:
+  verify_ssl: false
 
 online_image:
   - id: team_logo_image
@@ -178,15 +196,32 @@ online_image:
     format: PNG
     resize: 50x50
     transparency: alpha_channel
-    type: RGB # switch to RGB565 if you want to save memory, but it will look worse
-    placeholder: hurricanes_logo_image
+    type: RGB
+    on_download_finished:
+      then:
+      # first set the team_logo_downloaded global variable to true, so we know the image is downloaded and we can update the display.
+        - lambda: |-
+            id(team_logo_downloaded) = true;
+            // check to see if opponent_logo_image is downloaded, if so, update the display
+            if (id(opponent_logo_downloaded)) {
+              id(update_displayed_values).execute();
+            }
+      
   - id: opponent_logo_image
     url: "https://a.espncdn.com/i/teamlogos/nhl/500/scoreboard/car.png"
     format: PNG
     resize: 50x50
     transparency: alpha_channel
-    type: RGB # switch to RGB565 if you want to save memory, but it will look worse
-    placeholder: hurricanes_logo_image
+    type: RGB
+    on_download_finished:
+      then:
+      # first set the opponent_logo_downloaded global variable to true, so we know the image is downloaded and we can update the display.
+        - lambda: |-
+            id(opponent_logo_downloaded) = true;
+            // check to see if team_logo_image is downloaded, if so, update the display
+            if (id(team_logo_downloaded)) {
+              id(update_displayed_values).execute();
+            }
 
 
       
@@ -481,7 +516,7 @@ text_sensor:
       on_value:
         then:
           # when the displayed_team changes, we will call the update_displayed_values script to update the displayed values for the selected team
-          - script.execute: update_displayed_values
+          
     # display whats currently on the scoreboard
     - platform: template
       name: "Displayed Score"
@@ -505,12 +540,42 @@ select:
     set_action:
       - lambda: |-
           id(selected_team) = x;
+          id(displayed_team) = x;
+      - script.execute: auto_team_select
       - script.execute: update_displayed_values
-      
+
+
+button:
+  - platform: template
+    name: "Update Display"
+    id: update_display_button
+    icon: "mdi:refresh"
+    on_press:
+      then:
+        - script.execute: auto_team_select
+        - script.execute: update_displayed_values
+
+number:
+  - platform: template
+    name: "Device Brightness Slider"
+    id: device_brightness_slider
+    min_value: 0
+    max_value: 255
+    step: 5
+    mode: SLIDER
+    on_value:
+      then:
+        - hub75.set_brightness:
+            id: led_panel_display
+            brightness: !lambda 'return (int)x;'
+        - script.execute: update_displayed_values
+
+    icon: "mdi:lightbulb"
+    optimistic: true
 font:
   - file: "gfonts://Press+Start+2P"
     id: score_font
-    size: 8
+    size: 10
 
       
 script:
@@ -519,12 +584,14 @@ script:
     then:
       - if:
           condition:
-            or:
-              - lambda: 'return id(selected_team) == "Auto";'
+            - lambda: 'return id(selected_team) == "Auto";'
           then:
+            
             # this script determines which team logo (if any) should be displayed based on the selected source and the current game states, and updates the displayed_team global variable accordingly.
             # this script will only be called when the selected_team global variable is set to "Auto", so we will only check for teams that are currently in a game or have a game coming up.
             - lambda: |-
+                ESP_LOGD("auto_team_select", "Auto team select script running...");
+
                 // use the selected_team global variable to determine which team logo to display. 
                 // we will prioritize 
                   // 1) any team currently in a postseason game ({team}_state == "IN" && {team}_season == "post-season")
@@ -534,6 +601,7 @@ script:
                 // variable to hold the team to display, if it is not set, we keep searching for a team to display.
                 std::string selected_team; 
 
+                ESP_LOGD("Checking for teams in postseason or current games", "selected_team: %s", selected_team.c_str());
                 // check for any team currently in a postseason game, using 
                 if (id(timbers_state).state == "IN" && id(timbers_season).state == "post-season") {
                   selected_team = "Portland Timbers";
@@ -561,7 +629,8 @@ script:
                     selected_team = "Montreal Canadiens";
                   }
                 }
-
+                
+                ESP_LOGD("Checking for next game for all teams", "selected_team: %s", selected_team.c_str());
                 // if no team is currently in a game, check for the next game for all teams and select the team with the earliest next game datetime.
                 if (selected_team.empty()) {
                   std::string next_game_team;
@@ -601,6 +670,7 @@ script:
 
                 // if we have a team to display, update the displayed_team global variable
                 if (!selected_team.empty()) {
+                  ESP_LOGD("auto_team_select", "Selected team to display: %s", selected_team.c_str());
                   // check if the selected_team is different from the currently displayed_team, if so, update the displayed_team global variable
                   if (id(displayed_team) != selected_team) {
                     id(displayed_team) = selected_team;
@@ -612,12 +682,16 @@ script:
                 }
 
                 // update the displayed values for the selected team, so we can update the display with the correct information.
-                id(update_displayed_values).execute();
   # update displayed_state, displayed_season, displayed_logo, displayed_opponent_logo, displayed_team_colors, displayed_opponent_colors, displayed_next_game_datetime, displayed_team_score, displayed_opponent_score when displayed_team changes, so we can use these values to update the display.
   - id: update_displayed_values
     mode: restart
     then:
+      - logger.log:
+          format: "Updating displayed values for team: %s"
+          args: [ 'id(displayed_team)' ]
       - lambda: |-
+          ESP_LOGD("update_displayed_values", "Updating displayed values for team: %s", id(displayed_team).c_str());
+
           auto hex_nibble = [](char c) {
             if (c >= '0' && c <= '9') {
               return c - '0';
@@ -669,6 +743,10 @@ script:
             return parse_hex_color_at(raw, comma_pos + 1, fallback);
           };
 
+
+
+
+
           if (id(displayed_team) == "Portland Timbers") {
             id(displayed_state) = id(timbers_state).state;
             id(displayed_season) = id(timbers_season).state;
@@ -679,10 +757,6 @@ script:
             id(displayed_next_game_datetime) = id(timbers_next_game_datetime).state;
             id(displayed_team_score) = id(timbers_team_score).state;
             id(displayed_opponent_score) = id(timbers_opponent_score).state;
-            id(displayed_team_primary_color) = parse_primary_color(id(timbers_team_colors).state, Color::WHITE);
-            id(displayed_team_secondary_color) = parse_secondary_color(id(timbers_team_colors).state, Color::BLACK);
-            id(displayed_opponent_primary_color) = parse_primary_color(id(timbers_opponent_colors).state, Color::WHITE);
-            id(displayed_opponent_secondary_color) = parse_secondary_color(id(timbers_opponent_colors).state, Color::BLACK);
           } else if (id(displayed_team) == "Carolina Hurricanes") {
             id(displayed_state) = id(hurricanes_state).state;
             id(displayed_season) = id(hurricanes_season).state;
@@ -693,10 +767,6 @@ script:
             id(displayed_next_game_datetime) = id(hurricanes_next_game_datetime).state;
             id(displayed_team_score) = id(hurricanes_team_score).state;
             id(displayed_opponent_score) = id(hurricanes_opponent_score).state;
-            id(displayed_team_primary_color) = parse_primary_color(id(hurricanes_team_colors).state, Color::WHITE);
-            id(displayed_team_secondary_color) = parse_secondary_color(id(hurricanes_team_colors).state, Color::BLACK);
-            id(displayed_opponent_primary_color) = parse_primary_color(id(hurricanes_opponent_colors).state, Color::WHITE);
-            id(displayed_opponent_secondary_color) = parse_secondary_color(id(hurricanes_opponent_colors).state, Color::BLACK);
           } else if (id(displayed_team) == "New York Rangers") {
             id(displayed_state) = id(rangers_state).state;
             id(displayed_season) = id(rangers_season).state;
@@ -707,10 +777,6 @@ script:
             id(displayed_next_game_datetime) = id(rangers_next_game_datetime).state;
             id(displayed_team_score) = id(rangers_team_score).state;
             id(displayed_opponent_score) = id(rangers_opponent_score).state;
-            id(displayed_team_primary_color) = parse_primary_color(id(rangers_team_colors).state, Color::WHITE);
-            id(displayed_team_secondary_color) = parse_secondary_color(id(rangers_team_colors).state, Color::BLACK);
-            id(displayed_opponent_primary_color) = parse_primary_color(id(rangers_opponent_colors).state, Color::WHITE);
-            id(displayed_opponent_secondary_color) = parse_secondary_color(id(rangers_opponent_colors).state, Color::BLACK);
           } else if (id(displayed_team) == "Colorado Avalanche") {
             id(displayed_state) = id(avalanche_state).state;
             id(displayed_season) = id(avalanche_season).state;
@@ -721,10 +787,6 @@ script:
             id(displayed_next_game_datetime) = id(avalanche_next_game_datetime).state;
             id(displayed_team_score) = id(avalanche_team_score).state;
             id(displayed_opponent_score) = id(avalanche_opponent_score).state;
-            id(displayed_team_primary_color) = parse_primary_color(id(avalanche_team_colors).state, Color::WHITE);
-            id(displayed_team_secondary_color) = parse_secondary_color(id(avalanche_team_colors).state, Color::BLACK);
-            id(displayed_opponent_primary_color) = parse_primary_color(id(avalanche_opponent_colors).state, Color::WHITE);
-            id(displayed_opponent_secondary_color) = parse_secondary_color(id(avalanche_opponent_colors).state, Color::BLACK);
           } else if (id(displayed_team) == "Montreal Canadiens") {
             id(displayed_state) = id(canadiens_state).state;
             id(displayed_season) = id(canadiens_season).state;
@@ -735,10 +797,6 @@ script:
             id(displayed_next_game_datetime) = id(canadiens_next_game_datetime).state;
             id(displayed_team_score) = id(canadiens_team_score).state;
             id(displayed_opponent_score) = id(canadiens_opponent_score).state;
-            id(displayed_team_primary_color) = parse_primary_color(id(canadiens_team_colors).state, Color::WHITE);
-            id(displayed_team_secondary_color) = parse_secondary_color(id(canadiens_team_colors).state, Color::BLACK);
-            id(displayed_opponent_primary_color) = parse_primary_color(id(canadiens_opponent_colors).state, Color::WHITE);
-            id(displayed_opponent_secondary_color) = parse_secondary_color(id(canadiens_opponent_colors).state, Color::BLACK);
           } else {
             // if no team is selected, clear the displayed values
             id(displayed_state) = "";
@@ -752,10 +810,44 @@ script:
             id(displayed_opponent_score) = "";
           }
 
-          // check to see if the team logos have changed, if so, we will update the online_image components to load the new logos from the URLs.
-          id(update_online_images).execute();
-          // update the display to show the new values
-          id(update_display).execute();
+          id(displayed_team_primary_color) = parse_primary_color(id(displayed_team_colors), Color::WHITE);
+          id(displayed_team_secondary_color) = parse_secondary_color(id(displayed_team_colors), Color::BLACK);
+          id(displayed_opponent_primary_color) = parse_primary_color(id(displayed_opponent_colors), Color::WHITE);
+          id(displayed_opponent_secondary_color) = parse_secondary_color(id(displayed_opponent_colors), Color::BLACK);
+
+          //check to make sure displayed_team_primary_color and displayed_team_secondary_color are not the same, if they are the same, we will set the secondary color to black or white depending on the primary color. if the primary color is dark, we will set the secondary color to white, otherwise we will set the secondary color to black.
+          auto color_brightness = [](const Color &c) {
+            return (static_cast<int>(c.r) + static_cast<int>(c.g) + static_cast<int>(c.b)) / 3;
+          };
+
+          if (id(displayed_team_primary_color) == id(displayed_team_secondary_color)) {
+            ESP_LOGD("led_panel_display", "Team primary and secondary colors are the same. Adjusting secondary color. brightness: %d", color_brightness(id(displayed_team_primary_color)));
+            if (color_brightness(id(displayed_team_primary_color)) < 50) {
+              id(displayed_team_secondary_color) = Color::WHITE;
+            } else {
+              id(displayed_team_secondary_color) = Color::BLACK;
+            }
+          }
+          if (id(displayed_opponent_primary_color) == id(displayed_opponent_secondary_color)) {
+            ESP_LOGD("led_panel_display", "Opponent primary and secondary colors are the same. Adjusting secondary color. brightness: %d", color_brightness(id(displayed_opponent_primary_color)));
+            if (color_brightness(id(displayed_opponent_primary_color)) < 50) {
+              id(displayed_opponent_secondary_color) = Color::WHITE;
+            } else {
+              id(displayed_opponent_secondary_color) = Color::BLACK;
+            }
+          }
+
+          id(displayed_team_sensor).publish_state(id(displayed_team));
+          id(displayed_score).publish_state(id(displayed_team_score) + " - " + id(displayed_opponent_score));
+
+          // if the logos did not change, we dont need to update the logos so we call the update_display script to update the display with the new values, but we dont need to download the logos again.  
+          if(id(displayed_logo) != id(current_team_logo_url) || id(displayed_opponent_logo) != id(current_opponent_logo_url)) {
+            // check to see if the team logos have changed, if so, we will update the online_image components to load the new logos from the URLs.
+            id(update_online_images).execute();
+          } else {
+            // if the logos did not change, we can just update the display with the new values.
+            id(update_display).execute();
+          }
   - id: update_online_images
     mode: restart
     then:
@@ -765,6 +857,11 @@ script:
               - lambda: 'return id(displayed_logo) != id(current_team_logo_url);'
               - lambda: 'return id(displayed_opponent_logo) != id(current_opponent_logo_url);'
           then:
+            # set team_logo_downloaded and opponent_logo_downloaded to false, so we know the images are not downloaded yet.
+            - lambda: |-
+                id(team_logo_downloaded) = false;
+                id(opponent_logo_downloaded) = false;
+
             - online_image.set_url:
                 id: team_logo_image
                 url: !lambda 'return id(displayed_logo);'
@@ -784,6 +881,9 @@ script:
     mode: restart
     then:
       - lambda: |-
+          // clear the screen before updating the display
+          id(led_panel_display).fill(Color::BLACK);
+
           // check if the selected_team is "None", if so, display a blank screen.
           if (id(displayed_team) == "None") {
             id(led_panel_display).fill(Color::BLACK);
@@ -854,7 +954,6 @@ script:
               return raw;
             }
 
-            // User requested PDT display, so apply a fixed UTC-7 offset.
             hour -= 7;
             while (hour < 0) {
               hour += 24;
@@ -881,8 +980,7 @@ script:
             auto today_month = id(my_time).now().month;
             auto today_day = id(my_time).now().day_of_month;
 
-            // ESP_LOGD("main", "Current time: %04d-%02d-%02d", today_year, today_month, today_day);
-            // ESP_LOGD("main", "Game time: %04d-%02d-%02d", year, month, day);
+
             
             
             if (year == today_year && month == today_month && day == today_day) {
@@ -895,18 +993,22 @@ script:
             const std::string am_pm = is_pm ? "PM" : "AM";
             const int year_short = year % 100;
             char formatted_date[40];
-            snprintf(formatted_date, sizeof(formatted_date), "%d/%d/%s %s:%s%s", month, day, two_digit(year_short).c_str(), two_digit(hour_12).c_str(), two_digit(minute).c_str(), am_pm.c_str());
+            snprintf(formatted_date, sizeof(formatted_date), "%d/%d %s:%s%s", month, day, two_digit(hour_12).c_str(), two_digit(minute).c_str(), am_pm.c_str());
             return std::string(formatted_date);
           };
 
+          
+          // check if the displayed_state is "IN", if so, display the team logo, opponent logo, and underneath:  team score,  opponent score
+          // display the team logo on the left side of the scoreboard via the team_logo_image global variable, which is a URL to the team's logo image. we will use the image component to load the image from the URL and display it on the scoreboard.
+          // the team logo will be displayed at x=0, y=0, and will be 50x50 pixels. the opponent logo will be displayed at x=128-50, y=0, and will be 50x50 pixels.
+          id(led_panel_display).image(0, 0, id(team_logo_image));            
+          id(led_panel_display).image(id(led_panel_display).get_width() - 50, 0, id(opponent_logo_image));
+          id(led_panel_display).image(id(led_panel_display).get_width() / 2, 25, id(vs_logo_image), ImageAlign::TOP_CENTER);
+
+
           if (id(displayed_state) == "IN" || id(displayed_state) == "FINAL" || id(displayed_state) == "POST") {
            
-            
-            // check if the displayed_state is "IN", if so, display the team logo, opponent logo, and underneath:  team score,  opponent score
-            // display the team logo on the left side of the scoreboard via the team_logo_image global variable, which is a URL to the team's logo image. we will use the image component to load the image from the URL and display it on the scoreboard.
-            // the team logo will be displayed at x=0, y=0, and will be 50x50 pixels. the opponent logo will be displayed at x=128-50, y=0, and will be 50x50 pixels.
-            id(led_panel_display).image(0, 0, id(team_logo_image));            
-            id(led_panel_display).image(id(led_panel_display).get_width() - 50, 0, id(opponent_logo_image));
+           
 
             // team score display:
             id(led_panel_display).start_clipping(0, 50, id(led_panel_display).get_width() / 2, id(led_panel_display).get_height());
@@ -925,16 +1027,14 @@ script:
             return;
 
           } else {
-            // if the displayed_state is not "IN", display the team logo, opponent logo, and underneath:  next game date/time, or "No Game" if there is no next game.
-            id(led_panel_display).image(0, 0, id(team_logo_image));
-            id(led_panel_display).image(id(led_panel_display).get_width() - 50, 0, id(opponent_logo_image));
-            id(led_panel_display).start_clipping(0, 50, id(led_panel_display).get_width() / 2, id(led_panel_display).get_height());
+           
+            id(led_panel_display).start_clipping(0, 50, id(led_panel_display).get_width(), id(led_panel_display).get_height());
             id(led_panel_display).fill(id(displayed_team_secondary_color));
             
             if (id(displayed_next_game_datetime).empty()) {
-               id(led_panel_display).print(id(led_panel_display).get_width() / 2, 51, id(score_font),Color::WHITE, TextAlign::CENTER, "No Game");
+               id(led_panel_display).print(id(led_panel_display).get_width() / 2, 53, id(score_font),Color::WHITE, TextAlign::TOP_CENTER, "No Game");
             } else {
-               id(led_panel_display).print(id(led_panel_display).get_width() / 2, 51, id(score_font),id(displayed_team_primary_color), TextAlign::TOP_CENTER, format_utc_to_pdt(id(displayed_next_game_datetime)).c_str());
+               id(led_panel_display).print(id(led_panel_display).get_width() / 2, 53, id(score_font),id(displayed_team_primary_color), TextAlign::TOP_CENTER, format_utc_to_pdt(id(displayed_next_game_datetime)).c_str());
             }
             id(led_panel_display).end_clipping();
             id(led_panel_display).update();
