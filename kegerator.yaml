@@ -29,12 +29,8 @@ sensor:
     clk_pin: GPIO4
     dout_pin: GPIO3
     id: sensor_hx711_1
-    update_interval: 1s
-    unit_of_measurement: kg
-    device_class: weight
-    state_class: measurement
-    on_value:
-      - then: 
-          - lambda: |-
-              ESP_LOGD("hx711", "Weight: %.2f kg", x);
-              
+    update_interval: 1s    
+      # - calibrate_linear:
+      #     - 120 -> 0
+      #     - 810 -> 1
+    
