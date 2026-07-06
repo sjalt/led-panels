@@ -26,11 +26,58 @@ wifi:
 sensor:
   - platform: hx711
     name: seltzer
+    internal: true
     clk_pin: GPIO4
     dout_pin: GPIO3
     id: sensor_hx711_1
     update_interval: 1s    
-      # - calibrate_linear:
-      #     - 120 -> 0
-      #     - 810 -> 1
+    gain: "128"
+
+  - platform: template
+    name: keg fullness
+    unit_of_measurement: "%"
+    accuracy_decimals: 1
+    update_interval: 1s
+    lambda: |-
+      const float raw = id(sensor_hx711_1).state;
+      const float empty = id(keg_empty_raw);
+      const float full = id(keg_full_raw);
+
+      if (isnan(raw) || isnan(empty) || isnan(full) || full <= empty) {
+        return NAN;
+      }
+
+      float fullness = (raw - empty) * 100.0f / (full - empty);
+      if (fullness < 0.0f) {
+        fullness = 0.0f;
+      }
+      if (fullness > 100.0f) {
+        fullness = 100.0f;
+      }
+      return fullness;
+
+globals:
+  - id: keg_empty_raw
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  - id: keg_full_raw
+    type: float
+    restore_value: true
+    initial_value: '100.0'
+
+button:
+  - platform: template
+    name: set keg empty calibration
+    entity_category: config
+    on_press:
+      - lambda: |-
+          id(keg_empty_raw) = id(sensor_hx711_1).state;
+
+  - platform: template
+    name: set keg full calibration
+    entity_category: config
+    on_press:
+      - lambda: |-
+          id(keg_full_raw) = id(sensor_hx711_1).state;
     

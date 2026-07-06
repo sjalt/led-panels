@@ -1137,7 +1137,7 @@ script:
             ", Next Game: " + id(displayed_next_game_datetime)
           );
 
-          - script.execute: update_display
+      - script.execute: update_display
 
   
   # this script updates the display. it checks the displayed_* global variables to determine what to display on the scoreboard. 
