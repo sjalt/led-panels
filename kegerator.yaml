@@ -30,14 +30,14 @@ sensor:
     clk_pin: GPIO4
     dout_pin: GPIO3
     id: sensor_hx711_1
-    update_interval: 1s    
+    update_interval: 1min   
     gain: "128"
 
   - platform: template
     name: keg fullness
     unit_of_measurement: "%"
     accuracy_decimals: 1
-    update_interval: 1s
+    update_interval: 1min
     lambda: |-
       const float raw = id(sensor_hx711_1).state;
       const float empty = id(keg_empty_raw);
@@ -66,6 +66,35 @@ globals:
     restore_value: true
     initial_value: '100.0'
 
+number:
+  - platform: template
+    name: keg empty raw
+    id: keg_empty_raw_number
+    entity_category: config
+    mode: box
+    min_value: -20000000.0
+    max_value: 20000000.0
+    step: 1.0
+    lambda: |-
+      return id(keg_empty_raw);
+    set_action:
+      - lambda: |-
+          id(keg_empty_raw) = x;
+
+  - platform: template
+    name: keg full raw
+    id: keg_full_raw_number
+    entity_category: config
+    mode: box
+    min_value: -20000000.0
+    max_value: 20000000.0
+    step: 1.0
+    lambda: |-
+      return id(keg_full_raw);
+    set_action:
+      - lambda: |-
+          id(keg_full_raw) = x;
+
 button:
   - platform: template
     name: set keg empty calibration
@@ -73,6 +102,7 @@ button:
     on_press:
       - lambda: |-
           id(keg_empty_raw) = id(sensor_hx711_1).state;
+          id(keg_empty_raw_number).publish_state(id(keg_empty_raw));
 
   - platform: template
     name: set keg full calibration
@@ -80,4 +110,5 @@ button:
     on_press:
       - lambda: |-
           id(keg_full_raw) = id(sensor_hx711_1).state;
+          id(keg_full_raw_number).publish_state(id(keg_full_raw));
     
