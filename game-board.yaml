@@ -379,6 +379,7 @@ text_sensor:
               - lambda: 'return id(selected_team) == "Auto";'
           then:
             - script.execute: auto_team_select
+            - script.execute: update_displayed_values
     - <<: *timbers_tracker
       id: timbers_season
       attribute: season
@@ -415,7 +416,7 @@ text_sensor:
         # if the timbers team score changes, and the selected team is the timbers, we run the update_displayed_values script to update the displayed values for the timbers.
           condition:
             and:
-              - lambda: 'return id(selected_team) == "Portland Timbers";'
+              - lambda: 'return id(selected_team) == "Portland Timbers" || (id(selected_team) == "Auto" && id(displayed_team) == "Portland Timbers");'
               - lambda: 'return id(displayed_team_score) != x;'
           then:
             - script.execute: update_displayed_values
@@ -427,7 +428,7 @@ text_sensor:
         # if the timbers opponent score changes, and the selected team is the timbers, we run the update_displayed_values script to update the displayed values for the timbers.
           condition:
             and:
-              - lambda: 'return id(selected_team) == "Portland Timbers";'
+              - lambda: 'return id(selected_team) == "Portland Timbers" || (id(selected_team) == "Auto" && id(displayed_team) == "Portland Timbers");'
               - lambda: 'return id(displayed_opponent_score) != x;'
           then:
             - script.execute: update_displayed_values
@@ -445,6 +446,7 @@ text_sensor:
               - lambda: 'return id(selected_team) == "Auto";'
           then:
             - script.execute: auto_team_select
+            - script.execute: update_displayed_values
     - <<: *hurricanes_tracker
       id: hurricanes_season
       attribute: season
@@ -481,7 +483,7 @@ text_sensor:
         # if the hurricanes team score changes, and the selected team is the hurricanes, we run the update_displayed_values script to update the displayed values for the hurricanes.
           condition:
             and:
-              - lambda: 'return id(selected_team) == "Carolina Hurricanes";'
+              - lambda: 'return id(selected_team) == "Carolina Hurricanes" || (id(selected_team) == "Auto" && id(displayed_team) == "Carolina Hurricanes");'
               - lambda: 'return id(displayed_team_score) != x;'
           then:
             - script.execute: update_displayed_values
@@ -493,7 +495,7 @@ text_sensor:
         # if the hurricanes opponent score changes, and the selected team is the hurricanes, we run the update_displayed_values script to update the displayed values for the hurricanes.
           condition:
             and:
-              - lambda: 'return id(selected_team) == "Carolina Hurricanes";'
+              - lambda: 'return id(selected_team) == "Carolina Hurricanes" || (id(selected_team) == "Auto" && id(displayed_team) == "Carolina Hurricanes");'
               - lambda: 'return id(displayed_opponent_score) != x;'
           then:
             - script.execute: update_displayed_values
@@ -511,6 +513,7 @@ text_sensor:
               - lambda: 'return id(selected_team) == "Auto";'
           then:
             - script.execute: auto_team_select
+            - script.execute: update_displayed_values
     - <<: *rangers_tracker
       id: rangers_season
       attribute: season
@@ -547,7 +550,7 @@ text_sensor:
         # if the rangers team score changes, and the selected team is the rangers, we run the update_displayed_values script to update the displayed values for the rangers.
           condition:
             and:
-              - lambda: 'return id(selected_team) == "New York Rangers";'
+              - lambda: 'return id(selected_team) == "New York Rangers" || (id(selected_team) == "Auto" && id(displayed_team) == "New York Rangers");'
               - lambda: 'return id(displayed_team_score) != x;'
           then:
             - script.execute: update_displayed_values
@@ -559,7 +562,7 @@ text_sensor:
         # if the rangers opponent score changes, and the selected team is the rangers, we run the update_displayed_values script to update the displayed values for the rangers.
           condition:
             and:
-              - lambda: 'return id(selected_team) == "New York Rangers";'
+              - lambda: 'return id(selected_team) == "New York Rangers" || (id(selected_team) == "Auto" && id(displayed_team) == "New York Rangers");'
               - lambda: 'return id(displayed_opponent_score) != x;'
           then:
             - script.execute: update_displayed_values
@@ -577,6 +580,7 @@ text_sensor:
               - lambda: 'return id(selected_team) == "Auto";'
           then:
             - script.execute: auto_team_select
+            - script.execute: update_displayed_values
     - <<: *avalanche_tracker
       id: avalanche_season
       attribute: season
@@ -613,7 +617,7 @@ text_sensor:
         # if the avalanche team score changes, and the selected team is the avalanche, we run the update_displayed_values script to update the displayed values for the avalanche.
           condition:
             and:
-              - lambda: 'return id(selected_team) == "Colorado Avalanche";'
+              - lambda: 'return id(selected_team) == "Colorado Avalanche" || (id(selected_team) == "Auto" && id(displayed_team) == "Colorado Avalanche");'
               - lambda: 'return id(displayed_team_score) != x;'
           then:
             - script.execute: update_displayed_values
@@ -625,7 +629,7 @@ text_sensor:
         # if the avalanche opponent score changes, and the selected team is the avalanche, we run the update_displayed_values script to update the displayed values for the avalanche.
           condition:
             and:
-              - lambda: 'return id(selected_team) == "Colorado Avalanche";'
+              - lambda: 'return id(selected_team) == "Colorado Avalanche" || (id(selected_team) == "Auto" && id(displayed_team) == "Colorado Avalanche");'
               - lambda: 'return id(displayed_opponent_score) != x;'
           then:
             - script.execute: update_displayed_values
@@ -643,6 +647,7 @@ text_sensor:
               - lambda: 'return id(selected_team) == "Auto";'
           then:
             - script.execute: auto_team_select
+            - script.execute: update_displayed_values
     - <<: *canadiens_tracker
       id: canadiens_season
       attribute: season
@@ -679,7 +684,7 @@ text_sensor:
         # if the canadiens team score changes, and the selected team is the canadiens, we run the update_displayed_values script to update the displayed values for the canadiens.
           condition:
             and:
-              - lambda: 'return id(selected_team) == "Montreal Canadiens";'
+              - lambda: 'return id(selected_team) == "Montreal Canadiens" || (id(selected_team) == "Auto" && id(displayed_team) == "Montreal Canadiens");'
               - lambda: 'return id(displayed_team_score) != x;'
           then:
             - script.execute: update_displayed_values
@@ -691,7 +696,7 @@ text_sensor:
         # if the canadiens opponent score changes, and the selected team is the canadiens, we run the update_displayed_values script to update the displayed values for the canadiens.
           condition:
             and:
-              - lambda: 'return id(selected_team) == "Montreal Canadiens";'
+              - lambda: 'return id(selected_team) == "Montreal Canadiens" || (id(selected_team) == "Auto" && id(displayed_team) == "Montreal Canadiens");'
               - lambda: 'return id(displayed_opponent_score) != x;'
           then:
             - script.execute: update_displayed_values
@@ -715,6 +720,23 @@ text_sensor:
       name: "Displayed Team info"
       id: sensor_team_info
       icon: "mdi:format-list-bulleted"
+
+    - platform: template
+      name: "Debug Raw Game States"
+      id: debug_raw_game_states
+      icon: "mdi:bug-outline"
+      update_interval: 10s
+      lambda: |-
+        return {
+          "sel=" + id(selected_team) +
+          ", disp=" + id(displayed_team) +
+          ", disp_state=" + id(displayed_state) +
+          ", timbers=" + id(timbers_state).state +
+          ", hurricanes=" + id(hurricanes_state).state +
+          ", rangers=" + id(rangers_state).state +
+          ", avalanche=" + id(avalanche_state).state +
+          ", canadiens=" + id(canadiens_state).state
+        };
 
 select:
   - platform: template
@@ -965,6 +987,7 @@ script:
                 }
 
                 // update the displayed values for the selected team, so we can update the display with the correct information.
+      - script.execute: update_displayed_values
   # update displayed_state, displayed_season, displayed_logo, displayed_opponent_logo, displayed_team_colors, displayed_opponent_colors, displayed_next_game_datetime, displayed_team_score, displayed_opponent_score when displayed_team changes, so we can use these values to update the display.
   - id: update_displayed_values
     mode: restart
@@ -1119,6 +1142,16 @@ script:
               id(displayed_opponent_secondary_color) = Color::BLACK;
             }
           }
+
+          ESP_LOGD("state_debug", "selected=%s displayed=%s displayed_state=%s raw_states={T:%s H:%s R:%s A:%s C:%s}",
+                   id(selected_team).c_str(),
+                   id(displayed_team).c_str(),
+                   id(displayed_state).c_str(),
+                   id(timbers_state).state.c_str(),
+                   id(hurricanes_state).state.c_str(),
+                   id(rangers_state).state.c_str(),
+                   id(avalanche_state).state.c_str(),
+                   id(canadiens_state).state.c_str());
 
           id(displayed_team_sensor).publish_state(id(displayed_team));
           id(displayed_score).publish_state(id(displayed_team_score) + " - " + id(displayed_opponent_score));
