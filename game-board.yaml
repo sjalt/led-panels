@@ -200,543 +200,559 @@ time:
     id: my_time
     timezone: "America/Los_Angeles"
 
-image:
-  - file: https://a.espncdn.com/i/teamlogos/soccer/500/9723.png
-    id: timbers_logo_image
-    resize: 50x50
-    type: RGB565
-  - file: https://a.espncdn.com/i/teamlogos/nhl/500/scoreboard/car.png
-    id: hurricanes_logo_image
-    resize: 50x50
-    type: RGB565
-  - file: https://a.espncdn.com/i/teamlogos/nhl/500/scoreboard/nyr.png
-    id: rangers_logo_image
-    resize: 50x50
-    type: RGB565
-  - file: https://a.espncdn.com/i/teamlogos/nhl/500/scoreboard/col.png
-    id: avalanche_logo_image
-    resize: 50x50
-    type: RGB565
-  - file: https://a.espncdn.com/i/teamlogos/nhl/500/scoreboard/mtl.png
-    id: canadiens_logo_image
-    resize: 50x50
-    type: RGB565
-  - file: ${logo_base_path}/blank.png
-    id: blank_logo_image
-    resize: 50x50
-    type: RGB565
-  - file: ${logo_base_path}/vs.png
-    id: vs_logo_image
-    resize: 32x32
-    type: RGB565    
-    transparency: alpha_channel
 
 http_request:
   verify_ssl: false
 
-online_image:  
-  # timbers
-  - id: timbers_opponent_logo_image
-    url: "https://a.espncdn.com/i/teamlogos/leagues/500/mls.png"
+image:
+  - platform: file
+    file: https://a.espncdn.com/i/teamlogos/soccer/500/9723.png
+    id: timbers_logo_image
+    resize: 50x50
+    type: RGB565
+  - platform: file
+    file: https://a.espncdn.com/i/teamlogos/nhl/500/scoreboard/car.png
+    id: hurricanes_logo_image
+    resize: 50x50
+    type: RGB565
+  - platform: file
+    file: https://a.espncdn.com/i/teamlogos/nhl/500/scoreboard/nyr.png
+    id: rangers_logo_image
+    resize: 50x50
+    type: RGB565
+  - platform: file
+    file: https://a.espncdn.com/i/teamlogos/nhl/500/scoreboard/col.png
+    id: avalanche_logo_image
+    resize: 50x50
+    type: RGB565
+  - platform: file
+    file: https://a.espncdn.com/i/teamlogos/nhl/500/scoreboard/mtl.png
+    id: canadiens_logo_image
+    resize: 50x50
+    type: RGB565
+  - platform: file
+    file: /config/esphome/logos/blank.png
+    id: blank_logo_image
+    resize: 50x50
+    type: RGB565
+  - platform: file
+    file: /config/esphome/logos/vs.png
+    id: vs_logo_image
+    resize: 32x32
+    type: RGB565
+    transparency: alpha_channel
+  - platform: online_image
+    id: timbers_opponent_logo_image
+    url: https://a.espncdn.com/i/teamlogos/leagues/500/mls.png
     format: PNG
     resize: 50x50
     transparency: alpha_channel
     type: RGB565
     on_download_finished:
       then:
-        - lambda: |-
-            if (!id(timbers_opponent_logo_ready)) {
-              id(timbers_opponent_logo_ready) = true;
-              id(logos_boot_refresh_completed_count) += 1;
-              if (id(logos_boot_refresh_pending_count) > 0) {
-                id(logos_boot_refresh_pending_count) -= 1;
-              }
-              if (id(logos_boot_refresh_pending_count) == 0) {
-                id(logos_boot_refresh_in_progress) = false;
-                id(update_displayed_values).execute();
-              }
-            }
-            if (id(displayed_team) == "Portland Timbers") {
-              id(update_displayed_values).execute();
-            }
-
-  # hurricanes
-  - id: hurricanes_opponent_logo_image
-    url: "https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png"
+        - lambda: "if (!id(timbers_opponent_logo_ready)) {\n  id(timbers_opponent_logo_ready)\
+            \ = true;\n  id(logos_boot_refresh_completed_count) += 1;\n  if (id(logos_boot_refresh_pending_count)\
+            \ > 0) {\n    id(logos_boot_refresh_pending_count) -= 1;\n  }\n  if (id(logos_boot_refresh_pending_count)\
+            \ == 0) {\n    id(logos_boot_refresh_in_progress) = false;\n    id(update_displayed_values).execute();\n\
+            \  }\n}\nif (id(displayed_team) == \"Portland Timbers\") {\n  id(update_displayed_values).execute();\n\
+            }"
+  - platform: online_image
+    id: hurricanes_opponent_logo_image
+    url: https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png
     format: PNG
     resize: 50x50
     transparency: alpha_channel
     type: RGB565
     on_download_finished:
       then:
-        - lambda: |-
-            if (!id(hurricanes_opponent_logo_ready)) {
-              id(hurricanes_opponent_logo_ready) = true;
-              id(logos_boot_refresh_completed_count) += 1;
-              if (id(logos_boot_refresh_pending_count) > 0) {
-                id(logos_boot_refresh_pending_count) -= 1;
-              }
-              if (id(logos_boot_refresh_pending_count) == 0) {
-                id(logos_boot_refresh_in_progress) = false;
-                id(update_displayed_values).execute();
-              }
-            }
-            if (id(displayed_team) == "Carolina Hurricanes") {
-              id(update_displayed_values).execute();
-            }
-  
-  # rangers
-  - id: rangers_opponent_logo_image
-    url: "https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png"
+        - lambda: "if (!id(hurricanes_opponent_logo_ready)) {\n  id(hurricanes_opponent_logo_ready)\
+            \ = true;\n  id(logos_boot_refresh_completed_count) += 1;\n  if (id(logos_boot_refresh_pending_count)\
+            \ > 0) {\n    id(logos_boot_refresh_pending_count) -= 1;\n  }\n  if (id(logos_boot_refresh_pending_count)\
+            \ == 0) {\n    id(logos_boot_refresh_in_progress) = false;\n    id(update_displayed_values).execute();\n\
+            \  }\n}\nif (id(displayed_team) == \"Carolina Hurricanes\") {\n  id(update_displayed_values).execute();\n\
+            }"
+  - platform: online_image
+    id: rangers_opponent_logo_image
+    url: https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png
     format: PNG
     resize: 50x50
     transparency: alpha_channel
     type: RGB565
     on_download_finished:
       then:
-        - lambda: |-
-            if (!id(rangers_opponent_logo_ready)) {
-              id(rangers_opponent_logo_ready) = true;
-              id(logos_boot_refresh_completed_count) += 1;
-              if (id(logos_boot_refresh_pending_count) > 0) {
-                id(logos_boot_refresh_pending_count) -= 1;
-              }
-              if (id(logos_boot_refresh_pending_count) == 0) {
-                id(logos_boot_refresh_in_progress) = false;
-                id(update_displayed_values).execute();
-              }
-            }
-            if (id(displayed_team) == "New York Rangers") {
-              id(update_displayed_values).execute();
-            }
-
-  # avalanche
-  - id: avalanche_opponent_logo_image
-    url: "https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png"
+        - lambda: "if (!id(rangers_opponent_logo_ready)) {\n  id(rangers_opponent_logo_ready)\
+            \ = true;\n  id(logos_boot_refresh_completed_count) += 1;\n  if (id(logos_boot_refresh_pending_count)\
+            \ > 0) {\n    id(logos_boot_refresh_pending_count) -= 1;\n  }\n  if (id(logos_boot_refresh_pending_count)\
+            \ == 0) {\n    id(logos_boot_refresh_in_progress) = false;\n    id(update_displayed_values).execute();\n\
+            \  }\n}\nif (id(displayed_team) == \"New York Rangers\") {\n  id(update_displayed_values).execute();\n\
+            }"
+  - platform: online_image
+    id: avalanche_opponent_logo_image
+    url: https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png
     format: PNG
     resize: 50x50
     transparency: alpha_channel
     type: RGB565
     on_download_finished:
       then:
-        - lambda: |-
-            if (!id(avalanche_opponent_logo_ready)) {
-              id(avalanche_opponent_logo_ready) = true;
-              id(logos_boot_refresh_completed_count) += 1;
-              if (id(logos_boot_refresh_pending_count) > 0) {
-                id(logos_boot_refresh_pending_count) -= 1;
-              }
-              if (id(logos_boot_refresh_pending_count) == 0) {
-                id(logos_boot_refresh_in_progress) = false;
-                id(update_displayed_values).execute();
-              }
-            }
-            if (id(displayed_team) == "Colorado Avalanche") {
-              id(update_displayed_values).execute();
-            }
-  
-  # canadiens
-  - id: canadiens_opponent_logo_image
-    url: "https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png"
+        - lambda: "if (!id(avalanche_opponent_logo_ready)) {\n  id(avalanche_opponent_logo_ready)\
+            \ = true;\n  id(logos_boot_refresh_completed_count) += 1;\n  if (id(logos_boot_refresh_pending_count)\
+            \ > 0) {\n    id(logos_boot_refresh_pending_count) -= 1;\n  }\n  if (id(logos_boot_refresh_pending_count)\
+            \ == 0) {\n    id(logos_boot_refresh_in_progress) = false;\n    id(update_displayed_values).execute();\n\
+            \  }\n}\nif (id(displayed_team) == \"Colorado Avalanche\") {\n  id(update_displayed_values).execute();\n\
+            }"
+  - platform: online_image
+    id: canadiens_opponent_logo_image
+    url: https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png
     format: PNG
     resize: 50x50
     transparency: alpha_channel
     type: RGB565
     on_download_finished:
       then:
-        - lambda: |-
-            if (!id(canadiens_opponent_logo_ready)) {
-              id(canadiens_opponent_logo_ready) = true;
-              id(logos_boot_refresh_completed_count) += 1;
-              if (id(logos_boot_refresh_pending_count) > 0) {
-                id(logos_boot_refresh_pending_count) -= 1;
-              }
-              if (id(logos_boot_refresh_pending_count) == 0) {
-                id(logos_boot_refresh_in_progress) = false;
-                id(update_displayed_values).execute();
-              }
-            }
-            if (id(displayed_team) == "Montreal Canadiens") {
-              id(update_displayed_values).execute();
-            }
+        - lambda: "if (!id(canadiens_opponent_logo_ready)) {\n  id(canadiens_opponent_logo_ready)\
+            \ = true;\n  id(logos_boot_refresh_completed_count) += 1;\n  if (id(logos_boot_refresh_pending_count)\
+            \ > 0) {\n    id(logos_boot_refresh_pending_count) -= 1;\n  }\n  if (id(logos_boot_refresh_pending_count)\
+            \ == 0) {\n    id(logos_boot_refresh_in_progress) = false;\n    id(update_displayed_values).execute();\n\
+            \  }\n}\nif (id(displayed_team) == \"Montreal Canadiens\") {\n  id(update_displayed_values).execute();\n\
+            }"
 
 
 
       
 # get the current state of each team from the Home Assistant sensor and display it on the scoreboard
 text_sensor:
-  # Timbers
-    - &timbers_tracker
-      platform: homeassistant
-      id: timbers_state
-      entity_id: ${timbers_tracker_entity}
-      on_value:
-        if:
-        # if the timbers state changes, and the selected team is the timbers, we run the update_displayed_values script to update the displayed values for the timbers.
-          condition:
-            or:
-              - lambda: 'return id(selected_team) == "Portland Timbers";'
-              - lambda: 'return id(selected_team) == "Auto";'
-          then:
-            - script.execute: auto_team_select
-            - script.execute: update_displayed_values
-    - <<: *timbers_tracker
-      id: timbers_season
-      attribute: season
-    - <<: *timbers_tracker
-      id: timbers_logo
-      attribute: ${team_logo_attribute}
-    - <<: *timbers_tracker
-      id: timbers_opponent_logo
-      attribute: ${opponent_logo_attribute}
-      on_value:
+  - platform: homeassistant
+    id: timbers_state
+    entity_id: ${timbers_tracker_entity}
+    on_value:
+      if:
+        condition:
+          or:
+            - lambda: 'return id(selected_team) == "Portland Timbers";'
+            - lambda: 'return id(selected_team) == "Auto";'
         then:
-          - if:
-              condition:
-                lambda: 'return !x.empty();'
-              then:
-                - online_image.set_url:
-                    id: timbers_opponent_logo_image
-                    url: !lambda 'return x;'
-                - component.update: timbers_opponent_logo_image
-    - <<: *timbers_tracker
-      id: timbers_team_colors
-      attribute: ${team_colors_attribute}
-    - <<: *timbers_tracker
-      id: timbers_opponent_colors
-      attribute: ${opponent_colors_attribute}
-    - <<: *timbers_tracker
-      id: timbers_next_game_datetime
-      attribute: ${next_game_datetime_attribute}
-    - <<: *timbers_tracker
-      id: timbers_team_score
-      attribute: ${team_score_attribute}
-      on_value:
-        if:
-        # if the timbers team score changes, and the selected team is the timbers, we run the update_displayed_values script to update the displayed values for the timbers.
-          condition:
-            and:
-              - lambda: 'return id(selected_team) == "Portland Timbers" || (id(selected_team) == "Auto" && id(displayed_team) == "Portland Timbers");'
-              - lambda: 'return id(displayed_team_score) != x;'
-          then:
-            - script.execute: update_displayed_values
-    - <<: *timbers_tracker
-      id: timbers_opponent_score
-      attribute: ${opponent_score_attribute}
-      on_value:
-        if:
-        # if the timbers opponent score changes, and the selected team is the timbers, we run the update_displayed_values script to update the displayed values for the timbers.
-          condition:
-            and:
-              - lambda: 'return id(selected_team) == "Portland Timbers" || (id(selected_team) == "Auto" && id(displayed_team) == "Portland Timbers");'
-              - lambda: 'return id(displayed_opponent_score) != x;'
-          then:
-            - script.execute: update_displayed_values
-  # Hurricanes
-    - &hurricanes_tracker
-      platform: homeassistant
-      id: hurricanes_state
-      entity_id: ${hurricanes_tracker_entity}
-      on_value:
-        if:
-        # if the hurricanes state changes, and the selected team is the hurricanes, we run the update_displayed_values script to update the displayed values for the hurricanes.
-          condition:
-            or:
-              - lambda: 'return id(selected_team) == "Carolina Hurricanes";'
-              - lambda: 'return id(selected_team) == "Auto";'
-          then:
-            - script.execute: auto_team_select
-            - script.execute: update_displayed_values
-    - <<: *hurricanes_tracker
-      id: hurricanes_season
-      attribute: season
-    - <<: *hurricanes_tracker
-      id: hurricanes_logo
-      attribute: ${team_logo_attribute}
-    - <<: *hurricanes_tracker
-      id: hurricanes_opponent_logo
-      attribute: ${opponent_logo_attribute}
-      on_value:
+          - script.execute: auto_team_select
+          - script.execute: update_displayed_values
+
+  - platform: homeassistant
+    id: timbers_season
+    entity_id: ${timbers_tracker_entity}
+    attribute: season
+
+  - platform: homeassistant
+    id: timbers_logo
+    entity_id: ${timbers_tracker_entity}
+    attribute: ${team_logo_attribute}
+
+  - platform: homeassistant
+    id: timbers_opponent_logo
+    entity_id: ${timbers_tracker_entity}
+    attribute: ${opponent_logo_attribute}
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return !x.empty();'
+            then:
+              - online_image.set_url:
+                  id: timbers_opponent_logo_image
+                  url: !lambda 'return x;'
+              - component.update: timbers_opponent_logo_image
+
+  - platform: homeassistant
+    id: timbers_team_colors
+    entity_id: ${timbers_tracker_entity}
+    attribute: ${team_colors_attribute}
+
+  - platform: homeassistant
+    id: timbers_opponent_colors
+    entity_id: ${timbers_tracker_entity}
+    attribute: ${opponent_colors_attribute}
+
+  - platform: homeassistant
+    id: timbers_next_game_datetime
+    entity_id: ${timbers_tracker_entity}
+    attribute: ${next_game_datetime_attribute}
+
+  - platform: homeassistant
+    id: timbers_team_score
+    entity_id: ${timbers_tracker_entity}
+    attribute: ${team_score_attribute}
+    on_value:
+      if:
+        condition:
+          and:
+            - lambda: 'return id(selected_team) == "Portland Timbers" || (id(selected_team) == "Auto" && id(displayed_team) == "Portland Timbers");'
+            - lambda: 'return id(displayed_team_score) != x;'
         then:
-          - if:
-              condition:
-                lambda: 'return !x.empty();'
-              then:
-                - online_image.set_url:
-                    id: hurricanes_opponent_logo_image
-                    url: !lambda 'return x;'
-                - component.update: hurricanes_opponent_logo_image
-    - <<: *hurricanes_tracker
-      id: hurricanes_team_colors
-      attribute: ${team_colors_attribute}
-    - <<: *hurricanes_tracker
-      id: hurricanes_opponent_colors
-      attribute: ${opponent_colors_attribute}
-    - <<: *hurricanes_tracker
-      id: hurricanes_next_game_datetime
-      attribute: ${next_game_datetime_attribute}
-    - <<: *hurricanes_tracker
-      id: hurricanes_team_score
-      attribute: ${team_score_attribute}
-      on_value:
-        if:
-        # if the hurricanes team score changes, and the selected team is the hurricanes, we run the update_displayed_values script to update the displayed values for the hurricanes.
-          condition:
-            and:
-              - lambda: 'return id(selected_team) == "Carolina Hurricanes" || (id(selected_team) == "Auto" && id(displayed_team) == "Carolina Hurricanes");'
-              - lambda: 'return id(displayed_team_score) != x;'
-          then:
-            - script.execute: update_displayed_values
-    - <<: *hurricanes_tracker
-      id: hurricanes_opponent_score
-      attribute: ${opponent_score_attribute}
-      on_value:
-        if:
-        # if the hurricanes opponent score changes, and the selected team is the hurricanes, we run the update_displayed_values script to update the displayed values for the hurricanes.
-          condition:
-            and:
-              - lambda: 'return id(selected_team) == "Carolina Hurricanes" || (id(selected_team) == "Auto" && id(displayed_team) == "Carolina Hurricanes");'
-              - lambda: 'return id(displayed_opponent_score) != x;'
-          then:
-            - script.execute: update_displayed_values
-  # Rangers
-    - &rangers_tracker
-      platform: homeassistant
-      id: rangers_state
-      entity_id: ${rangers_tracker_entity}
-      on_value:
-        if:
-        # if the rangers state changes, and the selected team is the rangers, we run the update_displayed_values script to update the displayed values for the rangers.
-          condition:
-            or:
-              - lambda: 'return id(selected_team) == "New York Rangers";'
-              - lambda: 'return id(selected_team) == "Auto";'
-          then:
-            - script.execute: auto_team_select
-            - script.execute: update_displayed_values
-    - <<: *rangers_tracker
-      id: rangers_season
-      attribute: season
-    - <<: *rangers_tracker
-      id: rangers_logo
-      attribute: ${team_logo_attribute}
-    - <<: *rangers_tracker
-      id: rangers_opponent_logo
-      attribute: ${opponent_logo_attribute}
-      on_value:
+          - script.execute: update_displayed_values
+
+  - platform: homeassistant
+    id: timbers_opponent_score
+    entity_id: ${timbers_tracker_entity}
+    attribute: ${opponent_score_attribute}
+    on_value:
+      if:
+        condition:
+          and:
+            - lambda: 'return id(selected_team) == "Portland Timbers" || (id(selected_team) == "Auto" && id(displayed_team) == "Portland Timbers");'
+            - lambda: 'return id(displayed_opponent_score) != x;'
         then:
-          - if:
-              condition:
-                lambda: 'return !x.empty();'
-              then:
-                - online_image.set_url:
-                    id: rangers_opponent_logo_image
-                    url: !lambda 'return x;'
-                - component.update: rangers_opponent_logo_image
-    - <<: *rangers_tracker
-      id: rangers_team_colors
-      attribute: ${team_colors_attribute}
-    - <<: *rangers_tracker
-      id: rangers_opponent_colors
-      attribute: ${opponent_colors_attribute}
-    - <<: *rangers_tracker
-      id: rangers_next_game_datetime
-      attribute: ${next_game_datetime_attribute}
-    - <<: *rangers_tracker
-      id: rangers_team_score
-      attribute: ${team_score_attribute}
-      on_value:
-        if:
-        # if the rangers team score changes, and the selected team is the rangers, we run the update_displayed_values script to update the displayed values for the rangers.
-          condition:
-            and:
-              - lambda: 'return id(selected_team) == "New York Rangers" || (id(selected_team) == "Auto" && id(displayed_team) == "New York Rangers");'
-              - lambda: 'return id(displayed_team_score) != x;'
-          then:
-            - script.execute: update_displayed_values
-    - <<: *rangers_tracker
-      id: rangers_opponent_score
-      attribute: ${opponent_score_attribute}
-      on_value:
-        if:
-        # if the rangers opponent score changes, and the selected team is the rangers, we run the update_displayed_values script to update the displayed values for the rangers.
-          condition:
-            and:
-              - lambda: 'return id(selected_team) == "New York Rangers" || (id(selected_team) == "Auto" && id(displayed_team) == "New York Rangers");'
-              - lambda: 'return id(displayed_opponent_score) != x;'
-          then:
-            - script.execute: update_displayed_values
-  # Avalanche
-    - &avalanche_tracker
-      platform: homeassistant
-      id: avalanche_state
-      entity_id: ${avalanche_tracker_entity}
-      on_value:
-        if:
-        # if the avalanche state changes, and the selected team is the avalanche, we run the update_displayed_values script to update the displayed values for the avalanche.
-          condition:
-            or:
-              - lambda: 'return id(selected_team) == "Colorado Avalanche";'
-              - lambda: 'return id(selected_team) == "Auto";'
-          then:
-            - script.execute: auto_team_select
-            - script.execute: update_displayed_values
-    - <<: *avalanche_tracker
-      id: avalanche_season
-      attribute: season
-    - <<: *avalanche_tracker
-      id: avalanche_logo
-      attribute: ${team_logo_attribute}
-    - <<: *avalanche_tracker
-      id: avalanche_opponent_logo
-      attribute: ${opponent_logo_attribute}
-      on_value:
+          - script.execute: update_displayed_values
+
+  - platform: homeassistant
+    id: hurricanes_state
+    entity_id: ${hurricanes_tracker_entity}
+    on_value:
+      if:
+        condition:
+          or:
+            - lambda: 'return id(selected_team) == "Carolina Hurricanes";'
+            - lambda: 'return id(selected_team) == "Auto";'
         then:
-          - if:
-              condition:
-                lambda: 'return !x.empty();'
-              then:
-                - online_image.set_url:
-                    id: avalanche_opponent_logo_image
-                    url: !lambda 'return x;'
-                - component.update: avalanche_opponent_logo_image
-    - <<: *avalanche_tracker
-      id: avalanche_team_colors
-      attribute: ${team_colors_attribute}
-    - <<: *avalanche_tracker
-      id: avalanche_opponent_colors
-      attribute: ${opponent_colors_attribute}
-    - <<: *avalanche_tracker
-      id: avalanche_next_game_datetime
-      attribute: ${next_game_datetime_attribute}
-    - <<: *avalanche_tracker
-      id: avalanche_team_score
-      attribute: ${team_score_attribute}
-      on_value:
-        if:
-        # if the avalanche team score changes, and the selected team is the avalanche, we run the update_displayed_values script to update the displayed values for the avalanche.
-          condition:
-            and:
-              - lambda: 'return id(selected_team) == "Colorado Avalanche" || (id(selected_team) == "Auto" && id(displayed_team) == "Colorado Avalanche");'
-              - lambda: 'return id(displayed_team_score) != x;'
-          then:
-            - script.execute: update_displayed_values
-    - <<: *avalanche_tracker
-      id: avalanche_opponent_score
-      attribute: ${opponent_score_attribute}
-      on_value:
-        if:
-        # if the avalanche opponent score changes, and the selected team is the avalanche, we run the update_displayed_values script to update the displayed values for the avalanche.
-          condition:
-            and:
-              - lambda: 'return id(selected_team) == "Colorado Avalanche" || (id(selected_team) == "Auto" && id(displayed_team) == "Colorado Avalanche");'
-              - lambda: 'return id(displayed_opponent_score) != x;'
-          then:
-            - script.execute: update_displayed_values
-  # Canadiens
-    - &canadiens_tracker
-      platform: homeassistant
-      id: canadiens_state
-      entity_id: ${canadiens_tracker_entity}
-      on_value:
-        if:
-        # if the canadiens state changes, and the selected team is the canadiens, we run the update_displayed_values script to update the displayed values for the canadiens.
-          condition:
-            or:
-              - lambda: 'return id(selected_team) == "Montreal Canadiens";'
-              - lambda: 'return id(selected_team) == "Auto";'
-          then:
-            - script.execute: auto_team_select
-            - script.execute: update_displayed_values
-    - <<: *canadiens_tracker
-      id: canadiens_season
-      attribute: season
-    - <<: *canadiens_tracker
-      id: canadiens_logo
-      attribute: ${team_logo_attribute}
-    - <<: *canadiens_tracker
-      id: canadiens_opponent_logo
-      attribute: ${opponent_logo_attribute}
-      on_value:
+          - script.execute: auto_team_select
+          - script.execute: update_displayed_values
+
+  - platform: homeassistant
+    id: hurricanes_season
+    entity_id: ${hurricanes_tracker_entity}
+    attribute: season
+
+  - platform: homeassistant
+    id: hurricanes_logo
+    entity_id: ${hurricanes_tracker_entity}
+    attribute: ${team_logo_attribute}
+
+  - platform: homeassistant
+    id: hurricanes_opponent_logo
+    entity_id: ${hurricanes_tracker_entity}
+    attribute: ${opponent_logo_attribute}
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return !x.empty();'
+            then:
+              - online_image.set_url:
+                  id: hurricanes_opponent_logo_image
+                  url: !lambda 'return x;'
+              - component.update: hurricanes_opponent_logo_image
+
+  - platform: homeassistant
+    id: hurricanes_team_colors
+    entity_id: ${hurricanes_tracker_entity}
+    attribute: ${team_colors_attribute}
+
+  - platform: homeassistant
+    id: hurricanes_opponent_colors
+    entity_id: ${hurricanes_tracker_entity}
+    attribute: ${opponent_colors_attribute}
+
+  - platform: homeassistant
+    id: hurricanes_next_game_datetime
+    entity_id: ${hurricanes_tracker_entity}
+    attribute: ${next_game_datetime_attribute}
+
+  - platform: homeassistant
+    id: hurricanes_team_score
+    entity_id: ${hurricanes_tracker_entity}
+    attribute: ${team_score_attribute}
+    on_value:
+      if:
+        condition:
+          and:
+            - lambda: 'return id(selected_team) == "Carolina Hurricanes" || (id(selected_team) == "Auto" && id(displayed_team) == "Carolina Hurricanes");'
+            - lambda: 'return id(displayed_team_score) != x;'
         then:
-          - if:
-              condition:
-                lambda: 'return !x.empty();'
-              then:
-                - online_image.set_url:
-                    id: canadiens_opponent_logo_image
-                    url: !lambda 'return x;'
-                - component.update: canadiens_opponent_logo_image
-    - <<: *canadiens_tracker
-      id: canadiens_team_colors
-      attribute: ${team_colors_attribute}
-    - <<: *canadiens_tracker
-      id: canadiens_opponent_colors
-      attribute: ${opponent_colors_attribute}
-    - <<: *canadiens_tracker
-      id: canadiens_next_game_datetime
-      attribute: ${next_game_datetime_attribute}
-    - <<: *canadiens_tracker
-      id: canadiens_team_score
-      attribute: ${team_score_attribute}
-      on_value:
-        if:
-        # if the canadiens team score changes, and the selected team is the canadiens, we run the update_displayed_values script to update the displayed values for the canadiens.
-          condition:
-            and:
-              - lambda: 'return id(selected_team) == "Montreal Canadiens" || (id(selected_team) == "Auto" && id(displayed_team) == "Montreal Canadiens");'
-              - lambda: 'return id(displayed_team_score) != x;'
-          then:
-            - script.execute: update_displayed_values
-    - <<: *canadiens_tracker
-      id: canadiens_opponent_score
-      attribute: ${opponent_score_attribute}
-      on_value:
-        if:
-        # if the canadiens opponent score changes, and the selected team is the canadiens, we run the update_displayed_values script to update the displayed values for the canadiens.
-          condition:
-            and:
-              - lambda: 'return id(selected_team) == "Montreal Canadiens" || (id(selected_team) == "Auto" && id(displayed_team) == "Montreal Canadiens");'
-              - lambda: 'return id(displayed_opponent_score) != x;'
-          then:
-            - script.execute: update_displayed_values
+          - script.execute: update_displayed_values
+
+  - platform: homeassistant
+    id: hurricanes_opponent_score
+    entity_id: ${hurricanes_tracker_entity}
+    attribute: ${opponent_score_attribute}
+    on_value:
+      if:
+        condition:
+          and:
+            - lambda: 'return id(selected_team) == "Carolina Hurricanes" || (id(selected_team) == "Auto" && id(displayed_team) == "Carolina Hurricanes");'
+            - lambda: 'return id(displayed_opponent_score) != x;'
+        then:
+          - script.execute: update_displayed_values
+
+  - platform: homeassistant
+    id: rangers_state
+    entity_id: ${rangers_tracker_entity}
+    on_value:
+      if:
+        condition:
+          or:
+            - lambda: 'return id(selected_team) == "New York Rangers";'
+            - lambda: 'return id(selected_team) == "Auto";'
+        then:
+          - script.execute: auto_team_select
+          - script.execute: update_displayed_values
+
+  - platform: homeassistant
+    id: rangers_season
+    entity_id: ${rangers_tracker_entity}
+    attribute: season
+
+  - platform: homeassistant
+    id: rangers_logo
+    entity_id: ${rangers_tracker_entity}
+    attribute: ${team_logo_attribute}
+
+  - platform: homeassistant
+    id: rangers_opponent_logo
+    entity_id: ${rangers_tracker_entity}
+    attribute: ${opponent_logo_attribute}
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return !x.empty();'
+            then:
+              - online_image.set_url:
+                  id: rangers_opponent_logo_image
+                  url: !lambda 'return x;'
+              - component.update: rangers_opponent_logo_image
+
+  - platform: homeassistant
+    id: rangers_team_colors
+    entity_id: ${rangers_tracker_entity}
+    attribute: ${team_colors_attribute}
+
+  - platform: homeassistant
+    id: rangers_opponent_colors
+    entity_id: ${rangers_tracker_entity}
+    attribute: ${opponent_colors_attribute}
+
+  - platform: homeassistant
+    id: rangers_next_game_datetime
+    entity_id: ${rangers_tracker_entity}
+    attribute: ${next_game_datetime_attribute}
+
+  - platform: homeassistant
+    id: rangers_team_score
+    entity_id: ${rangers_tracker_entity}
+    attribute: ${team_score_attribute}
+    on_value:
+      if:
+        condition:
+          and:
+            - lambda: 'return id(selected_team) == "New York Rangers" || (id(selected_team) == "Auto" && id(displayed_team) == "New York Rangers");'
+            - lambda: 'return id(displayed_team_score) != x;'
+        then:
+          - script.execute: update_displayed_values
+
+  - platform: homeassistant
+    id: rangers_opponent_score
+    entity_id: ${rangers_tracker_entity}
+    attribute: ${opponent_score_attribute}
+    on_value:
+      if:
+        condition:
+          and:
+            - lambda: 'return id(selected_team) == "New York Rangers" || (id(selected_team) == "Auto" && id(displayed_team) == "New York Rangers");'
+            - lambda: 'return id(displayed_opponent_score) != x;'
+        then:
+          - script.execute: update_displayed_values
+
+  - platform: homeassistant
+    id: avalanche_state
+    entity_id: ${avalanche_tracker_entity}
+    on_value:
+      if:
+        condition:
+          or:
+            - lambda: 'return id(selected_team) == "Colorado Avalanche";'
+            - lambda: 'return id(selected_team) == "Auto";'
+        then:
+          - script.execute: auto_team_select
+          - script.execute: update_displayed_values
+
+  - platform: homeassistant
+    id: avalanche_season
+    entity_id: ${avalanche_tracker_entity}
+    attribute: season
+
+  - platform: homeassistant
+    id: avalanche_logo
+    entity_id: ${avalanche_tracker_entity}
+    attribute: ${team_logo_attribute}
+
+  - platform: homeassistant
+    id: avalanche_opponent_logo
+    entity_id: ${avalanche_tracker_entity}
+    attribute: ${opponent_logo_attribute}
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return !x.empty();'
+            then:
+              - online_image.set_url:
+                  id: avalanche_opponent_logo_image
+                  url: !lambda 'return x;'
+              - component.update: avalanche_opponent_logo_image
+
+  - platform: homeassistant
+    id: avalanche_team_colors
+    entity_id: ${avalanche_tracker_entity}
+    attribute: ${team_colors_attribute}
+
+  - platform: homeassistant
+    id: avalanche_opponent_colors
+    entity_id: ${avalanche_tracker_entity}
+    attribute: ${opponent_colors_attribute}
+
+  - platform: homeassistant
+    id: avalanche_next_game_datetime
+    entity_id: ${avalanche_tracker_entity}
+    attribute: ${next_game_datetime_attribute}
+
+  - platform: homeassistant
+    id: avalanche_team_score
+    entity_id: ${avalanche_tracker_entity}
+    attribute: ${team_score_attribute}
+    on_value:
+      if:
+        condition:
+          and:
+            - lambda: 'return id(selected_team) == "Colorado Avalanche" || (id(selected_team) == "Auto" && id(displayed_team) == "Colorado Avalanche");'
+            - lambda: 'return id(displayed_team_score) != x;'
+        then:
+          - script.execute: update_displayed_values
+
+  - platform: homeassistant
+    id: avalanche_opponent_score
+    entity_id: ${avalanche_tracker_entity}
+    attribute: ${opponent_score_attribute}
+    on_value:
+      if:
+        condition:
+          and:
+            - lambda: 'return id(selected_team) == "Colorado Avalanche" || (id(selected_team) == "Auto" && id(displayed_team) == "Colorado Avalanche");'
+            - lambda: 'return id(displayed_opponent_score) != x;'
+        then:
+          - script.execute: update_displayed_values
+
+  - platform: homeassistant
+    id: canadiens_state
+    entity_id: ${canadiens_tracker_entity}
+    on_value:
+      if:
+        condition:
+          or:
+            - lambda: 'return id(selected_team) == "Montreal Canadiens";'
+            - lambda: 'return id(selected_team) == "Auto";'
+        then:
+          - script.execute: auto_team_select
+          - script.execute: update_displayed_values
+
+  - platform: homeassistant
+    id: canadiens_season
+    entity_id: ${canadiens_tracker_entity}
+    attribute: season
+
+  - platform: homeassistant
+    id: canadiens_logo
+    entity_id: ${canadiens_tracker_entity}
+    attribute: ${team_logo_attribute}
+
+  - platform: homeassistant
+    id: canadiens_opponent_logo
+    entity_id: ${canadiens_tracker_entity}
+    attribute: ${opponent_logo_attribute}
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return !x.empty();'
+            then:
+              - online_image.set_url:
+                  id: canadiens_opponent_logo_image
+                  url: !lambda 'return x;'
+              - component.update: canadiens_opponent_logo_image
+
+  - platform: homeassistant
+    id: canadiens_team_colors
+    entity_id: ${canadiens_tracker_entity}
+    attribute: ${team_colors_attribute}
+
+  - platform: homeassistant
+    id: canadiens_opponent_colors
+    entity_id: ${canadiens_tracker_entity}
+    attribute: ${opponent_colors_attribute}
+
+  - platform: homeassistant
+    id: canadiens_next_game_datetime
+    entity_id: ${canadiens_tracker_entity}
+    attribute: ${next_game_datetime_attribute}
+
+  - platform: homeassistant
+    id: canadiens_team_score
+    entity_id: ${canadiens_tracker_entity}
+    attribute: ${team_score_attribute}
+    on_value:
+      if:
+        condition:
+          and:
+            - lambda: 'return id(selected_team) == "Montreal Canadiens" || (id(selected_team) == "Auto" && id(displayed_team) == "Montreal Canadiens");'
+            - lambda: 'return id(displayed_team_score) != x;'
+        then:
+          - script.execute: update_displayed_values
+
+  - platform: homeassistant
+    id: canadiens_opponent_score
+    entity_id: ${canadiens_tracker_entity}
+    attribute: ${opponent_score_attribute}
+    on_value:
+      if:
+        condition:
+          and:
+            - lambda: 'return id(selected_team) == "Montreal Canadiens" || (id(selected_team) == "Auto" && id(displayed_team) == "Montreal Canadiens");'
+            - lambda: 'return id(displayed_opponent_score) != x;'
+        then:
+          - script.execute: update_displayed_values
 
   # create template sensors to display the current logo and score on the scoreboard
-    - platform: template
-      name: "Displayed Team"
-      id: displayed_team_sensor
-      icon: "mdi:format-list-bulleted"
-      on_value:
-        then:
-          # when the displayed_team changes, we will call the update_displayed_values script to update the displayed values for the selected team
-          
-    # display whats currently on the scoreboard
-    - platform: template
-      name: "Displayed Score"
-      id: displayed_score
-      icon: "mdi:format-list-bulleted"
-    
-    - platform: template
-      name: "Displayed Team info"
-      id: sensor_team_info
-      icon: "mdi:format-list-bulleted"
+  - platform: template
+    name: "Displayed Team"
+    id: displayed_team_sensor
+    icon: "mdi:format-list-bulleted"
+    on_value:
+      then:
+        # when the displayed_team changes, we will call the update_displayed_values script to update the displayed values for the selected team
+        
+  # display whats currently on the scoreboard
+  - platform: template
+    name: "Displayed Score"
+    id: displayed_score
+    icon: "mdi:format-list-bulleted"
+  
+  - platform: template
+    name: "Displayed Team info"
+    id: sensor_team_info
+    icon: "mdi:format-list-bulleted"
 
-    - platform: template
-      name: "Debug Raw Game States"
-      id: debug_raw_game_states
-      icon: "mdi:bug-outline"
-      update_interval: 10s
-      lambda: |-
-        return {
-          "sel=" + id(selected_team) +
-          ", disp=" + id(displayed_team) +
-          ", disp_state=" + id(displayed_state) +
-          ", timbers=" + id(timbers_state).state +
-          ", hurricanes=" + id(hurricanes_state).state +
-          ", rangers=" + id(rangers_state).state +
-          ", avalanche=" + id(avalanche_state).state +
-          ", canadiens=" + id(canadiens_state).state
-        };
+  - platform: template
+    name: "Debug Raw Game States"
+    id: debug_raw_game_states
+    icon: "mdi:bug-outline"
+    update_interval: 10s
+    lambda: |-
+      return {
+        "sel=" + id(selected_team) +
+        ", disp=" + id(displayed_team) +
+        ", disp_state=" + id(displayed_state) +
+        ", timbers=" + id(timbers_state).state +
+        ", hurricanes=" + id(hurricanes_state).state +
+        ", rangers=" + id(rangers_state).state +
+        ", avalanche=" + id(avalanche_state).state +
+        ", canadiens=" + id(canadiens_state).state
+      };
 
 select:
   - platform: template
@@ -992,9 +1008,6 @@ script:
   - id: update_displayed_values
     mode: restart
     then:
-      - logger.log:
-          format: "Updating displayed values for team: %s"
-          args: [ 'id(displayed_team)' ]
       - lambda: |-
           ESP_LOGD("update_displayed_values", "Updating displayed values for team: %s", id(displayed_team).c_str());
 
