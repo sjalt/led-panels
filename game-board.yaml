@@ -257,7 +257,7 @@ online_image:
               }
             }
             if (id(displayed_team) == "Portland Timbers") {
-              id(update_display).execute();
+              id(update_displayed_values).execute();
             }
 
   # hurricanes
@@ -282,7 +282,7 @@ online_image:
               }
             }
             if (id(displayed_team) == "Carolina Hurricanes") {
-              id(update_display).execute();
+              id(update_displayed_values).execute();
             }
   
   # rangers
@@ -307,7 +307,7 @@ online_image:
               }
             }
             if (id(displayed_team) == "New York Rangers") {
-              id(update_display).execute();
+              id(update_displayed_values).execute();
             }
 
   # avalanche
@@ -332,7 +332,7 @@ online_image:
               }
             }
             if (id(displayed_team) == "Colorado Avalanche") {
-              id(update_display).execute();
+              id(update_displayed_values).execute();
             }
   
   # canadiens
@@ -357,7 +357,7 @@ online_image:
               }
             }
             if (id(displayed_team) == "Montreal Canadiens") {
-              id(update_display).execute();
+              id(update_displayed_values).execute();
             }
 
 
@@ -715,6 +715,23 @@ text_sensor:
       name: "Displayed Team info"
       id: sensor_team_info
       icon: "mdi:format-list-bulleted"
+
+    - platform: template
+      name: "Debug Raw Game States"
+      id: debug_raw_game_states
+      icon: "mdi:bug-outline"
+      update_interval: 10s
+      lambda: |-
+        return {
+          "sel=" + id(selected_team) +
+          ", disp=" + id(displayed_team) +
+          ", disp_state=" + id(displayed_state) +
+          ", timbers=" + id(timbers_state).state +
+          ", hurricanes=" + id(hurricanes_state).state +
+          ", rangers=" + id(rangers_state).state +
+          ", avalanche=" + id(avalanche_state).state +
+          ", canadiens=" + id(canadiens_state).state
+        };
 
 select:
   - platform: template
@@ -1306,13 +1323,13 @@ script:
             // team score display:
             id(led_panel_display).start_clipping(0, 50, id(led_panel_display).get_width() / 2, id(led_panel_display).get_height());
             id(led_panel_display).fill(id(displayed_team_secondary_color));
-            id(led_panel_display).print(id(led_panel_display).get_width() / 4, 52, id(score_font),id(displayed_team_primary_color), TextAlign::TOP_CENTER, id(displayed_team_score).c_str());
+            id(led_panel_display).print(id(led_panel_display).get_width() / 4, 53, id(score_font),id(displayed_team_primary_color), TextAlign::TOP_CENTER, id(displayed_team_score).c_str());
             id(led_panel_display).end_clipping();
             
             // opponent score display:
             id(led_panel_display).start_clipping(id(led_panel_display).get_width() / 2, 50, id(led_panel_display).get_width(), id(led_panel_display).get_height());
             id(led_panel_display).fill(id(displayed_opponent_secondary_color));
-            id(led_panel_display).print(3 * id(led_panel_display).get_width() / 4, 52, id(score_font),id(displayed_opponent_primary_color), TextAlign::TOP_CENTER, id(displayed_opponent_score).c_str());
+            id(led_panel_display).print(3 * id(led_panel_display).get_width() / 4, 53, id(score_font),id(displayed_opponent_primary_color), TextAlign::TOP_CENTER, id(displayed_opponent_score).c_str());
             id(led_panel_display).end_clipping();
 
             
