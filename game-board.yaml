@@ -17,10 +17,8 @@ esphome:
             id(avalanche_opponent_logo_ready) = false;
             id(canadiens_opponent_logo_ready) = false;
             id(future_game_cycle_index) = 0;
-        - script.execute:
-            id: refresh_all_opponent_logos
-            args:
-              force_refresh: false
+            id(logos_refresh_force) = false;
+        - script.execute: refresh_all_opponent_logos
         - script.execute: auto_team_select
         - script.execute: update_displayed_values
 
@@ -175,6 +173,10 @@ globals:
     type: int
     restore_value: false
     initial_value: '0'
+  - id: logos_refresh_force
+    type: bool
+    restore_value: false
+    initial_value: 'false'
   - id: timbers_opponent_logo_ready
     type: bool
     restore_value: false
@@ -836,12 +838,11 @@ button:
     icon: "mdi:refresh"
     on_press:
       then:
+        - lambda: |-
+            id(logos_refresh_force) = true;
         - script.execute: auto_team_select
         - script.execute: update_displayed_values
-        - script.execute:
-            id: refresh_all_opponent_logos
-            args:
-              force_refresh: true
+        - script.execute: refresh_all_opponent_logos
 
 number:
   - platform: template
@@ -870,10 +871,10 @@ font:
 script:
   - id: refresh_all_opponent_logos
     mode: restart
-    parameters:
-      force_refresh: bool
     then:
       - lambda: |-
+          const bool force_refresh = id(logos_refresh_force);
+          id(logos_refresh_force) = false;
           id(logos_boot_refresh_in_progress) = true;
           id(logos_boot_refresh_pending_count) = 0;
           id(logos_boot_refresh_completed_count) = 0;
@@ -920,7 +921,7 @@ script:
 
       - if:
           condition:
-            lambda: 'return !id(timbers_opponent_logo).state.empty() && (force_refresh || id(timbers_opponent_logo).state != id(timbers_last_opponent_logo_url));'
+            lambda: 'return !id(timbers_opponent_logo).state.empty() && (id(logos_refresh_force) || id(timbers_opponent_logo).state != id(timbers_last_opponent_logo_url));'
           then:
             - lambda: |-
                 id(timbers_last_opponent_logo_url) = id(timbers_opponent_logo).state;
@@ -931,7 +932,7 @@ script:
 
       - if:
           condition:
-            lambda: 'return !id(hurricanes_opponent_logo).state.empty() && (force_refresh || id(hurricanes_opponent_logo).state != id(hurricanes_last_opponent_logo_url));'
+            lambda: 'return !id(hurricanes_opponent_logo).state.empty() && (id(logos_refresh_force) || id(hurricanes_opponent_logo).state != id(hurricanes_last_opponent_logo_url));'
           then:
             - lambda: |-
                 id(hurricanes_last_opponent_logo_url) = id(hurricanes_opponent_logo).state;
@@ -942,7 +943,7 @@ script:
 
       - if:
           condition:
-            lambda: 'return !id(rangers_opponent_logo).state.empty() && (force_refresh || id(rangers_opponent_logo).state != id(rangers_last_opponent_logo_url));'
+            lambda: 'return !id(rangers_opponent_logo).state.empty() && (id(logos_refresh_force) || id(rangers_opponent_logo).state != id(rangers_last_opponent_logo_url));'
           then:
             - lambda: |-
                 id(rangers_last_opponent_logo_url) = id(rangers_opponent_logo).state;
@@ -953,7 +954,7 @@ script:
 
       - if:
           condition:
-            lambda: 'return !id(avalanche_opponent_logo).state.empty() && (force_refresh || id(avalanche_opponent_logo).state != id(avalanche_last_opponent_logo_url));'
+            lambda: 'return !id(avalanche_opponent_logo).state.empty() && (id(logos_refresh_force) || id(avalanche_opponent_logo).state != id(avalanche_last_opponent_logo_url));'
           then:
             - lambda: |-
                 id(avalanche_last_opponent_logo_url) = id(avalanche_opponent_logo).state;
@@ -964,7 +965,7 @@ script:
 
       - if:
           condition:
-            lambda: 'return !id(canadiens_opponent_logo).state.empty() && (force_refresh || id(canadiens_opponent_logo).state != id(canadiens_last_opponent_logo_url));'
+            lambda: 'return !id(canadiens_opponent_logo).state.empty() && (id(logos_refresh_force) || id(canadiens_opponent_logo).state != id(canadiens_last_opponent_logo_url));'
           then:
             - lambda: |-
                 id(canadiens_last_opponent_logo_url) = id(canadiens_opponent_logo).state;
