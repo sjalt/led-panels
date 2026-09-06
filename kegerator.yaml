@@ -26,11 +26,13 @@ wifi:
 sensor:
   - platform: hx711
     name: seltzer
-    internal: true
+    # internal: true
+    # dt is white-brn
+    # clk is brown
     clk_pin: GPIO4
     dout_pin: GPIO3
     id: sensor_hx711_1
-    update_interval: 1min   
+    update_interval: 5s
     gain: "128"
 
   - platform: template
@@ -55,16 +57,16 @@ sensor:
         fullness = 100.0f;
       }
       return fullness;
-
+    force_update: true
 globals:
   - id: keg_empty_raw
     type: float
     restore_value: true
-    initial_value: '0.0'
+    initial_value: '1714175.0'
   - id: keg_full_raw
     type: float
     restore_value: true
-    initial_value: '100.0'
+    initial_value: '3910143.0'
 
 number:
   - platform: template
