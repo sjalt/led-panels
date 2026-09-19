@@ -78,8 +78,6 @@ sensor:
     id: keg_smoothed
     entity_id: sensor.living_room_kegerator_keg_smoothed
     internal: true
-    filters:
-      - heartbeat: 1min
     on_value:
       then:
         - if:
@@ -100,7 +98,6 @@ graph:
     min_value: 0
     max_value: 100
     border: true
-    continuous: true
 
 globals:
   - id: keg_value_received
