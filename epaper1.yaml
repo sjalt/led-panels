@@ -98,6 +98,7 @@ graph:
     min_value: 0
     max_value: 100
     border: true
+    line_type: SOLID
 
 globals:
   - id: keg_value_received

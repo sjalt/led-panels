@@ -18,6 +18,7 @@ api:
 # Allow Over-The-Air updates
 ota:
 - platform: esphome
+  encryption:
 
 wifi:
   ssid: !secret wifi_ssid
@@ -34,6 +35,12 @@ sensor:
     id: sensor_hx711_1
     update_interval: 5s
     gain: "128"
+    filters:
+      - lambda: |-
+          if (x < 1000000.0f) {
+            return {};
+          }
+          return x;
 
   - platform: template
     name: keg fullness
