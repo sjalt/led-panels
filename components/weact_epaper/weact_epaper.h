@@ -1,12 +1,16 @@
 #pragma once
 
-#include <GxEPD2_BW.h>
+#include <gdey/GxEPD2_370_GDEY037T03.h>
 #include <SPI.h>
+
+#include <cstring>
 
 #include "esphome/components/display/display.h"
 #include "esphome/core/log.h"
 
 namespace esphome::weact_epaper {
+
+static const char *const TAG = "weact_epaper";
 
 class WeActEpaper : public display::Display {
  public:
@@ -14,27 +18,35 @@ class WeActEpaper : public display::Display {
       : clk_pin_(clk_pin),
         mosi_pin_(mosi_pin),
         cs_pin_(cs_pin),
-        display_(GxEPD2_370_GDEY037T03(cs_pin, dc_pin, reset_pin, busy_pin)) {}
+        panel_(cs_pin, dc_pin, reset_pin, busy_pin) {}
 
   void setup() override {
     SPI.begin(this->clk_pin_, -1, this->mosi_pin_, this->cs_pin_);
-    this->display_.epd2.selectSPI(SPI, SPISettings(4000000, MSBFIRST, SPI_MODE0));
-    this->display_.init(0, true, 50, false);
-    this->display_.setRotation(1);
+    this->panel_.selectSPI(SPI, SPISettings(4000000, MSBFIRST, SPI_MODE0));
+    this->panel_.init(0, true, 50, false);
   }
 
   void update() override {
-    this->display_.setFullWindow();
-    this->display_.firstPage();
-    do {
-      this->display_.fillScreen(GxEPD_WHITE);
-      this->do_update_();
-    } while (this->display_.nextPage());
-    this->display_.hibernate();
+    std::memset(this->buffer_, 0xFF, sizeof(this->buffer_));
+    this->do_update_();
+    this->panel_.writeImageForFullRefresh(this->buffer_, 0, 0, NATIVE_WIDTH, NATIVE_HEIGHT);
+    this->panel_.refresh(false);
+    this->panel_.writeImageAgain(this->buffer_, 0, 0, NATIVE_WIDTH, NATIVE_HEIGHT);
+    this->panel_.hibernate();
   }
 
   void draw_pixel_at(int x, int y, Color color) override {
-    this->display_.drawPixel(x, y, color.is_on() ? GxEPD_BLACK : GxEPD_WHITE);
+    if (x < 0 || x >= DISPLAY_WIDTH || y < 0 || y >= DISPLAY_HEIGHT)
+      return;
+
+    const int native_x = NATIVE_WIDTH - y - 1;
+    const int native_y = x;
+    const size_t index = native_x / 8 + native_y * (NATIVE_WIDTH / 8);
+    const uint8_t mask = 0x80 >> (native_x % 8);
+    if (color.is_on())
+      this->buffer_[index] &= ~mask;
+    else
+      this->buffer_[index] |= mask;
   }
 
   void dump_config() override { LOG_DISPLAY("", "WeAct GDEY037T03", this); }
@@ -44,13 +56,19 @@ class WeActEpaper : public display::Display {
   display::DisplayType get_display_type() override { return display::DisplayType::DISPLAY_TYPE_BINARY; }
 
  protected:
-  int get_width_internal() override { return 416; }
-  int get_height_internal() override { return 240; }
+  static constexpr int NATIVE_WIDTH = 240;
+  static constexpr int NATIVE_HEIGHT = 416;
+  static constexpr int DISPLAY_WIDTH = 416;
+  static constexpr int DISPLAY_HEIGHT = 240;
+
+  int get_width_internal() override { return DISPLAY_WIDTH; }
+  int get_height_internal() override { return DISPLAY_HEIGHT; }
 
   int clk_pin_;
   int mosi_pin_;
   int cs_pin_;
-  GxEPD2_BW<GxEPD2_370_GDEY037T03, GxEPD2_370_GDEY037T03::HEIGHT> display_;
+  uint8_t buffer_[NATIVE_WIDTH / 8 * NATIVE_HEIGHT]{};
+  GxEPD2_370_GDEY037T03 panel_;
 };
 
 }  // namespace esphome::weact_epaper

@@ -52,7 +52,4 @@ async def to_code(config):
         cg.add(var.set_writer(lambda_))
 
     cg.add_library("SPI", None)
-    cg.add_library("Wire", None)
-    cg.add_library("adafruit/Adafruit BusIO", None)
-    cg.add_library("adafruit/Adafruit GFX Library", None)
     cg.add_library("zinggjm/GxEPD2", "1.6.5")
