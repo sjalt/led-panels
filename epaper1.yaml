@@ -7,7 +7,7 @@
 # | SDA          | MOSI (Master Out Slave In) | D10 (GPIO9 / Hardware MOSI)
 # | SCL          | SCLK (Clock)               | D8 (GPIO7 / Hardware SCK)
 # | CS           | Chip Select                | D7 (GPIO44) or any free GPIO
-# | D/C (or DC)  | Data / Command Control     | D3 (GPIO4) or any free GPIO
+# | D/C (or DC)  | Data / Command Control     | D4 (GPIO5) or any free GPIO
 # | RES (or RST) | Reset                      | D2 (GPIO3) or any free GPIO
 # | BUSY         | Busy Status Output         | D1 (GPIO2) or any free GPIO
 esphome:
@@ -16,13 +16,19 @@ esphome:
   on_boot:
     priority: -100
     then:
+      - delay: 1s
       - component.update: disp
 
 esp32:
   variant: esp32s3
   flash_size: 8MB
   framework:
-    type: esp-idf
+    type: arduino
+
+external_components:
+  - source:
+      type: local
+      path: components
 
 logger:
 
@@ -43,28 +49,19 @@ wifi:
 
 captive_portal:
 
-spi:
-  - id: spi_1
-    clk_pin: GPIO7
-    miso_pin: GPIO8
-    mosi_pin: GPIO9
-
 display:
-  - platform: epaper_spi
+  - platform: weact_epaper
     id: disp
-    model: WEACT-4.2IN-3C
-    dc_pin: GPIO4
-    dimensions:
-      height: 240
-      width: 416
-
-    reset_pin: GPIO3
-    auto_clear_enabled: false
-    update_interval: never
+    clk_pin: GPIO7
+    mosi_pin: GPIO9
     cs_pin: GPIO44
+    dc_pin: GPIO5
+    reset_pin: GPIO3
     busy_pin: GPIO2
+    auto_clear_enabled: true
+    update_interval: never
     lambda: |-
-      it.print(10, 10, id(my_font), "test");
+      it.print(40, 80, id(my_font), "TEST");
 
 font:
   - file: "gfonts://Roboto"
