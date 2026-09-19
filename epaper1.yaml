@@ -59,11 +59,61 @@ display:
     reset_pin: GPIO3
     busy_pin: GPIO2
     auto_clear_enabled: true
-    update_interval: never
+    update_interval: 1min
     lambda: |-
-      it.print(40, 80, id(my_font), "TEST");
+      it.print(208, 4, id(title_font), TextAlign::TOP_CENTER, "Fizzy Keg Status");
+
+      if (id(keg_smoothed).has_state()) {
+        it.printf(208, 37, id(value_font), TextAlign::TOP_CENTER, "%.1f%%", id(keg_smoothed).state);
+      } else {
+        it.print(208, 37, id(value_font), TextAlign::TOP_CENTER, "--.-%");
+      }
+
+      it.graph(10, 72, id(keg_graph));
+      it.print(10, 220, id(label_font), TextAlign::TOP_LEFT, "3 days ago");
+      it.print(406, 220, id(label_font), TextAlign::TOP_RIGHT, "Now");
+
+sensor:
+  - platform: homeassistant
+    id: keg_smoothed
+    entity_id: sensor.living_room_kegerator_keg_smoothed
+    internal: true
+    filters:
+      - heartbeat: 1min
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: return !id(keg_value_received);
+            then:
+              - lambda: id(keg_value_received) = true;
+              - component.update: disp
+
+graph:
+  - id: keg_graph
+    sensor: keg_smoothed
+    duration: 3d
+    width: 396
+    height: 142
+    x_grid: 1d
+    y_grid: 10
+    min_value: 0
+    max_value: 100
+    border: true
+    continuous: true
+
+globals:
+  - id: keg_value_received
+    type: bool
+    initial_value: "false"
 
 font:
   - file: "gfonts://Roboto"
-    id: my_font
-    size: 32
+    id: title_font
+    size: 28
+  - file: "gfonts://Roboto"
+    id: value_font
+    size: 24
+  - file: "gfonts://Roboto"
+    id: label_font
+    size: 12
